@@ -15,6 +15,60 @@
 </div>
 <!-- PAGE-HEADER END -->
 
+<!-- Summary Cards -->
+<div class="row">
+    <div class="col-sm-6 col-md-6 col-lg-6 col-xl-2">
+        <div class="card overflow-hidden">
+            <div class="card-body">
+                <div class="text-center">
+                    <h6 class="mb-1">Total Employees</h6>
+                    <h2 class="mb-0 number-font fs-20">{{ $stats['total'] }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-6 col-lg-6 col-xl-2">
+        <div class="card overflow-hidden">
+            <div class="card-body">
+                <div class="text-center">
+                    <h6 class="mb-1">Active</h6>
+                    <h2 class="mb-0 number-font fs-20 text-success">{{ $stats['active'] }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-6 col-lg-6 col-xl-2">
+        <div class="card overflow-hidden">
+            <div class="card-body">
+                <div class="text-center">
+                    <h6 class="mb-1">Inactive</h6>
+                    <h2 class="mb-0 number-font fs-20 text-muted">{{ $stats['inactive'] }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-6 col-lg-6 col-xl-3">
+        <div class="card overflow-hidden">
+            <div class="card-body">
+                <div class="text-center">
+                    <h6 class="mb-1">Punch In (Today)</h6>
+                    <h2 class="mb-0 number-font fs-20 text-primary">{{ $stats['punched_in'] }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-6 col-lg-6 col-xl-3">
+        <div class="card overflow-hidden">
+            <div class="card-body">
+                <div class="text-center">
+                    <h6 class="mb-1">Punch Out (Today)</h6>
+                    <h2 class="mb-0 number-font fs-20 text-info">{{ $stats['punched_out'] }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-lg-12">
         <div class="card">

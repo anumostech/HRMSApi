@@ -20,7 +20,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('login') }}" method="POST">
+                <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <div class="mb-3">
                         <label for="email" class="form-label">Email Address</label>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AttendanceLog;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Services\AttendanceParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +103,34 @@ class AttendanceController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('attendance.index', compact('attendance', 'companies'));
+        // Stats for cards
+        $today = Carbon::today()->toDateString();
+        $totalEmployees = Employee::count();
+        $activeEmployees = Employee::where('status', 'active')->count();
+        $inactiveEmployees = Employee::where('status', 'inactive')->count();
+        
+        $todayLogs = AttendanceLog::whereDate('timestamp', $today)
+            ->select('userid', DB::raw('MIN(timestamp) as punch_in'), DB::raw('MAX(timestamp) as punch_out'))
+            ->groupBy('userid')
+            ->get();
+
+        $punchedInCount = $todayLogs->filter(function($log) {
+            return Carbon::parse($log->punch_in)->format('H:i:s') <= '12:00:00';
+        })->count();
+
+        $punchedOutCount = $todayLogs->filter(function($log) {
+            return Carbon::parse($log->punch_out)->format('H:i:s') >= '12:00:00';
+        })->count();
+
+        $stats = [
+            'total' => $totalEmployees,
+            'active' => $activeEmployees,
+            'inactive' => $inactiveEmployees,
+            'punched_in' => $punchedInCount,
+            'punched_out' => $punchedOutCount
+        ];
+
+        return view('attendance.index', compact('attendance', 'companies', 'stats'));
     }
 
     /**
@@ -173,6 +201,55 @@ class AttendanceController extends Controller
             }
         }
 
+        // Trigger Late/Absent Checks
+        $this->notifyHRAboutLatecomers($companyId);
+        $this->notifyHRAboutAbsentees($companyId);
+
         return redirect()->route('attendance.index')->with('success', "Processed $processed records from " . count($grouped) . " daily logs.");
+    }
+
+    private function notifyHRAboutLatecomers($companyId)
+    {
+        $hrUsers = \App\Models\User::all(); // Notify all admins
+        $monthStart = Carbon::now()->startOfMonth();
+        
+        $lateEmployees = AttendanceLog::where('company_id', $companyId)
+            ->whereBetween('timestamp', [$monthStart, Carbon::now()])
+            ->whereRaw("TIME(timestamp) >= '08:11:00' AND TIME(timestamp) <= '12:00:00'")
+            ->select('userid', DB::raw('count(*) as late_count'))
+            ->groupBy('userid')
+            ->having('late_count', '>=', 3)
+            ->get();
+
+        foreach ($lateEmployees as $lateRecord) {
+            $employee = Employee::find($lateRecord->userid);
+            if ($employee) {
+                foreach ($hrUsers as $user) {
+                    $user->notify(new \App\Notifications\LateWarningNotification($employee, $lateRecord->late_count));
+                }
+            }
+        }
+    }
+
+    private function notifyHRAboutAbsentees($companyId)
+    {
+        $today = Carbon::today()->toDateString();
+        $hrUsers = \App\Models\User::all();
+        
+        $activeEmployees = Employee::where('company_id', $companyId)
+            ->where('status', 'active')
+            ->get();
+
+        foreach ($activeEmployees as $employee) {
+            $punchedIn = AttendanceLog::where('userid', $employee->id)
+                ->whereDate('timestamp', $today)
+                ->exists();
+
+            if (!$punchedIn) {
+                foreach ($hrUsers as $user) {
+                    $user->notify(new \App\Notifications\AbsentNotification($employee)); 
+                }
+            }
+        }
     }
 }

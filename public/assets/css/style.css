@@ -58189,4 +58189,39 @@ textarea.form-control {
     width: 60% !important;
   }
 }
+.slide.is-expanded a {
+    text-decoration: none;
+}
+.sidenav-menu-item.active {
+    text-decoration: none;
+    color: #fff;
+    background-color: var(--primary-bg-color);
+}
+.sidenav-menu-item {
+    position: relative;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    padding: 13px 20px;
+    font-size: 15px;
+    font-weight: 400;
+    -webkit-transition: border-inline-start-color 0.3s ease, background-color 0.3s ease;
+    transition: border-inline-start-color 0.3s ease, background-color 0.3s ease;
+    color: #051a1a;
+    margin: 2px 0px;
+    white-space: nowrap;
+    border-radius: 10px;
+    line-height: 1;
+}
+.side-menu .sub-category {
+    color: #74829c;
+    padding: 12px 19px 7px;
+    white-space: nowrap;
+    position: relative;
+}
+
+
 /*# sourceMappingURL=style.css.map */

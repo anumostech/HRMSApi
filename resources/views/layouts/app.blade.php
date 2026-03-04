@@ -75,7 +75,7 @@
                                     </div>
                                     <div class="dropdown-divider m-0"></div>
                                     <a class="dropdown-item" href="{{ route('profile.edit') }}">
-                                        <i class="dropdown-icon fe fe-user"></i> Profile Settings
+                                        <i class="dropdown-icon fe fe-user"></i> Profile 
                                     </a>
                                     <div class="dropdown-divider m-0"></div>
                                     <form action="{{ route('logout') }}" method="POST" id="logout-form" class="d-none">
@@ -111,23 +111,40 @@
                         </a>
                     </div>
                     <div class="main-sidemenu">
+                        <div class="slide-left disabled d-none" id="slide-left">
+                           
+                        </div>
                         <ul class="side-menu mt-4">
-                            <li class="slide" style="padding:13px 40px;">
-                                <a class="side-menu__item {{ request()->routeIs('attendance.index') ? 'active' : '' }}" href="{{ route('attendance.index') }}">
-                                    <i class="side-menu__icon fe fe-home"></i>
-                                    <span class="side-menu__label">Attendance Listing</span>
+                            <li class="sub-category">
+                            </li>
+                            <li class="slide">
+                                <a class="sidenav-menu-item {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                                    <i class="side-menu__icon fe fe-grid"></i>
+                                    <span class="side-menu__label">Dashboard</span>
                                 </a>
                             </li>
-                            <li class="slide" style="padding:13px 40px;">
-                                <a class="side-menu__item {{ request()->routeIs('attendance.upload') ? 'active' : '' }}" href="{{ route('attendance.upload') }}">
+                            <li class="slide">
+                                <a class="sidenav-menu-item {{ request()->routeIs('employees.*') ? 'active' : '' }}" href="{{ route('employees.index') }}">
+                                    <i class="side-menu__icon fe fe-users"></i>
+                                    <span class="side-menu__label">Employees</span>
+                                </a>
+                            </li>
+                            <li class="slide">
+                                <a class="sidenav-menu-item {{ request()->routeIs('attendance.index') ? 'active' : '' }}" href="{{ route('attendance.index') }}">
+                                    <i class="side-menu__icon fe fe-home"></i>
+                                    <span class="side-menu__label">Attendance</span>
+                                </a>
+                            </li>
+                            <li class="slide">
+                                <a class="sidenav-menu-item {{ request()->routeIs('attendance.upload') ? 'active' : '' }}" href="{{ route('attendance.upload') }}">
                                     <i class="side-menu__icon fe fe-upload"></i>
                                     <span class="side-menu__label">Upload Logs</span>
                                 </a>
                             </li>
-                            <li class="slide" style="padding:13px 40px;">
-                                <a class="side-menu__item {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">
+                            <li class="slide">
+                                <a class="sidenav-menu-item {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">
                                     <i class="side-menu__icon fe fe-user"></i>
-                                    <span class="side-menu__label">Profile Settings</span>
+                                    <span class="side-menu__label">Settings</span>
                                 </a>
                             </li>
                         </ul>
@@ -174,12 +191,14 @@
     <script src="{{ asset('assets/js/plugins/bootstrap/js/bootstrap.min.js') }}"></script>
 
     <!-- SIDE-MENU JS -->
+    <script src="https://cdn.jsdelivr.net/npm/perfect-scrollbar@1.5.5/dist/perfect-scrollbar.min.js"></script>
     <script src="{{ asset('assets/js/sidemenu.js') }}"></script>
 
     <!-- sticky js -->
     <script src="{{ asset('assets/js/sticky.js') }}"></script>
 
     <!-- CUSTOM JS -->
+    <script src="{{ asset('assets/js/circle-progress.min.js') }}"></script>
     <script src="{{ asset('assets/js/custom.js') }}"></script>
 
     @yield('scripts')
