@@ -302,6 +302,17 @@
                         <path
                             d="M3 0a1 1 0 0 0-1 1v1H1a1 1 0 0 0-1 1v1h16V3a1 1 0 0 0-1-1h-1V1a1 1 0 0 0-2 0v1H4V1a1 1 0 0 0-1-1zM0 6v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6H0z" />
                     </svg>
+                    WFH Request
+                </a>
+            </div>
+            <div class="emp-nav-item">
+                <a href="{{ route('employee.leaves.index') }}"
+                    class="emp-nav-link {{ request()->routeIs('employee.leaves.*') ? 'active' : '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                        viewBox="0 0 16 16">
+                        <path
+                            d="M3 0a1 1 0 0 0-1 1v1H1a1 1 0 0 0-1 1v1h16V3a1 1 0 0 0-1-1h-1V1a1 1 0 0 0-2 0v1H4V1a1 1 0 0 0-1-1zM0 6v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6H0z" />
+                    </svg>
                     My Leaves
                 </a>
             </div>
