@@ -320,6 +320,27 @@
                                     </a>
                                 </li>
                                 <li class="slide">
+                                    <a class="sidenav-menu-item {{ request()->routeIs('designations.*') ? 'active' : '' }}"
+                                        href="{{ route('designations.index') }}">
+                                        <i class="side-menu__icon fe fe-tag"></i>
+                                        <span class="side-menu__label">Designations</span>
+                                    </a>
+                                </li>
+                                <li class="slide">
+                                    <a class="sidenav-menu-item {{ request()->routeIs('wfh_requests.*') ? 'active' : '' }}"
+                                        href="{{ route('wfh_requests.index') }}">
+                                        <i class="side-menu__icon fe fe-home"></i>
+                                        <span class="side-menu__label">WFH Requests</span>
+                                    </a>
+                                </li>
+                                <li class="slide">
+                                    <a class="sidenav-menu-item {{ request()->routeIs('task_reports.*') ? 'active' : '' }}"
+                                        href="{{ route('task_reports.index') }}">
+                                        <i class="side-menu__icon fe fe-clipboard"></i>
+                                        <span class="side-menu__label">Task Reports</span>
+                                    </a>
+                                </li>
+                                <li class="slide">
                                     <a class="sidenav-menu-item {{ request()->routeIs('reports.*') ? 'active' : '' }}"
                                         href="#">
                                         <i class="side-menu__icon fe fe-trending-up"></i>

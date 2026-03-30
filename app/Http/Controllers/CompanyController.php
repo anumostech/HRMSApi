@@ -22,6 +22,12 @@ class CompanyController extends Controller
         return view('admin.companies.index', compact('companies', 'organisation_id'));
     }
 
+    public function getByOrganization($organization_id)
+    {
+        $companies = Company::where('organisation_id', $organization_id)->get();
+        return response()->json($companies);
+    }
+
     public function create(Request $request)
     {
         $organisation_id = $request->get('organisation_id');

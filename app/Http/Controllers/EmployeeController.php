@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Department;
+use App\Models\Organisation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -33,7 +34,9 @@ class EmployeeController extends Controller
     {
         $companies = Company::all();
         $departments = Department::all();
-        return view('employees.create', compact('companies', 'departments'));
+        $organizations = Organisation::all();
+        $employee = new Employee();
+        return view('employees.create', compact('companies', 'departments', 'organizations', 'employee'));
     }
 
     public function store(StoreEmployeeRequest $request)
@@ -55,15 +58,16 @@ class EmployeeController extends Controller
         ];
 
         foreach ($documentFields as $field) {
-            if (!empty($data[$field])) {
+            if (!empty($data[$field]) && strpos($data[$field], 'temp/') === 0) {
                 $tempPath = $data[$field];
                 $fileName = basename($tempPath);
 
                 $newPath = 'documents/' . $fileName;
 
-                Storage::disk('public')->move($tempPath, $newPath);
-
-                $data[$field] = $newPath;
+                if (Storage::disk('public')->exists($tempPath)) {
+                    Storage::disk('public')->move($tempPath, $newPath);
+                    $data[$field] = $newPath;
+                }
             }
         }
 
@@ -101,7 +105,8 @@ class EmployeeController extends Controller
     {
         $companies = Company::all();
         $departments = Department::all();
-        return view('employees.edit', compact('employee', 'companies', 'departments'));
+        $organizations = Organisation::all();
+        return view('employees.edit', compact('employee', 'companies', 'departments', 'organizations'));
     }
 
     public function update(UpdateEmployeeRequest $request, Employee $employee)
@@ -132,18 +137,16 @@ class EmployeeController extends Controller
         //     }
         // }
         foreach ($documentFields as $field) {
-            if (!empty($data[$field])) {
+            if (!empty($data[$field]) && strpos($data[$field], 'temp/') === 0) {
+                $tempPath = $data[$field];
+                $fileName = basename($tempPath);
 
-                // if ($employee->$field) {
-                    $tempPath = $data[$field];
-                    $fileName = basename($tempPath);
+                $newPath = 'documents/' . $fileName;
 
-                    $newPath = 'documents/' . $fileName;
-
+                if (Storage::disk('public')->exists($tempPath)) {
                     Storage::disk('public')->move($tempPath, $newPath);
-                // }
-
-                $data[$field] = $newPath;
+                    $data[$field] = $newPath;
+                }
             }
         }
 

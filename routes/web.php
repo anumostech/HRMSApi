@@ -14,6 +14,12 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\DesignationController;
+use App\Http\Controllers\WfhRequestController;
+use App\Http\Controllers\TaskReportController;
+use App\Http\Controllers\Employee\PunchController;
+use App\Http\Controllers\Employee\TaskReportController as EmployeeTaskReportController;
+use App\Http\Controllers\Employee\WfhRequestController as EmployeeWfhRequestController;
 use App\Http\Controllers\Employee\LeaveController as EmployeeLeaveController;
 use Dom\Document;
 use Illuminate\Support\Facades\Artisan;
@@ -69,6 +75,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('organizations', OrganizationController::class);
     Route::resource('companies', CompanyController::class);
+    Route::get('/companies/by-organization/{organizationId}', [CompanyController::class, 'getByOrganization'])->name('companies.by_organization');
 
     Route::prefix('/departments')->group(function () {
         Route::post('/store', [DepartmentController::class, 'store'])->name('departments.store');
@@ -92,6 +99,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/types/update-status/{leaveType}', [\App\Http\Controllers\LeaveTypeController::class, 'updateStatus'])->name('leaves.types.updateStatus');
     });
 
+    // HR Modules
+    Route::resource('designations', DesignationController::class);
+
+    // WFH Requests
+    Route::get('/wfh-requests', [WfhRequestController::class, 'index'])->name('wfh_requests.index');
+    Route::post('/wfh-requests/{wfhRequest}/status', [WfhRequestController::class, 'updateStatus'])->name('wfh_requests.status');
+
+    // Task Reports
+    Route::get('/task-reports', [TaskReportController::class, 'index'])->name('task_reports.index');
+
 });
 
 // ─── Employee Portal (separate guard — no admin auth needed) ──────────────────
@@ -112,6 +129,18 @@ Route::prefix('employee')->name('employee.')->group(function () {
             Route::get('/create', [EmployeeLeaveController::class, 'create'])->name('leaves.create');
             Route::post('/store', [EmployeeLeaveController::class, 'store'])->name('leaves.store');
         });
+
+        // WFH Requests
+        Route::get('/wfh-requests', [EmployeeWfhRequestController::class, 'index'])->name('wfh.index');
+        Route::get('/wfh-requests/create', [EmployeeWfhRequestController::class, 'create'])->name('wfh.create');
+        Route::post('/wfh-requests/store', [EmployeeWfhRequestController::class, 'store'])->name('wfh.store');
+
+        // Task Reports
+        Route::get('/task-reports', [EmployeeTaskReportController::class, 'index'])->name('task_reports.index');
+
+        // Punch System
+        Route::post('/punch-in', [PunchController::class, 'punchIn'])->name('punch.in');
+        Route::post('/punch-out', [PunchController::class, 'punchOut'])->name('punch.out');
     });
 });
 

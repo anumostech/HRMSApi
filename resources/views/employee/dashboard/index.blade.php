@@ -26,7 +26,21 @@
                     </div>
                     <div class="ms-auto d-none d-md-block text-end">
                         <div class="fs-4 fw-bold">{{ now()->format('h:i A') }}</div>
-                        <div class="opacity-75 small">{{ now()->format('l, d M Y') }}</div>
+                        <div class="opacity-75 small mb-2">{{ now()->format('l, d M Y') }}</div>
+                        @if($canPunch)
+                            @if(!$todayLog || !$todayLog->punch_in)
+                                <form action="{{ route('employee.punch.in') }}" method="POST">
+                                    @csrf
+                                    <button class="btn btn-success rounded-pill px-4 shadow-sm"><i class="fe fe-log-in me-1"></i> Punch In</button>
+                                </form>
+                            @elseif(!$todayLog->punch_out)
+                                <button type="button" class="btn btn-danger rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#punchOutModal">
+                                    <i class="fe fe-log-out me-1"></i> Punch Out
+                                </button>
+                            @else
+                                <button class="btn btn-secondary rounded-pill px-4 shadow-sm" disabled><i class="fe fe-check-circle me-1"></i> Punched Out</button>
+                            @endif
+                        @endif
                     </div>
                 </div>
             </div>
@@ -221,4 +235,37 @@
             color: #0891b2;
         }
     </style>
+
+    {{-- Punch Out Modal --}}
+    <div class="modal fade" id="punchOutModal" tabindex="-1" aria-labelledby="punchOutModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <form action="{{ route('employee.punch.out') }}" method="POST">
+                    @csrf
+                    <div class="modal-header bg-soft-danger text-danger border-0">
+                        <h5 class="modal-title fw-bold" id="punchOutModalLabel"><i class="fe fe-log-out me-2"></i> Submit Task Report</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tasks Completed Today <span class="text-danger">*</span></label>
+                            <textarea name="tasks_completed" class="form-control" rows="3" required placeholder="Describe what you worked on today..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Plan for Tomorrow <span class="text-danger">*</span></label>
+                            <textarea name="plan_tomorrow" class="form-control" rows="3" required placeholder="What will you work on tomorrow?"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Remarks (Optional)</label>
+                            <textarea name="remarks" class="form-control" rows="2" placeholder="Any blockages or extra notes?"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger"><i class="fe fe-log-out me-1"></i> Punch Out</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
