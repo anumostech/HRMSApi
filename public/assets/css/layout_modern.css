@@ -1,12 +1,12 @@
 /* Modern Layout & Sidebar Styles */
 :root {
-    --hr-primary: #6366f1;
-    --hr-primary-dark: #4f46e5;
+    --hr-primary: #2ecc71;
+    --hr-primary-dark: #1a9e52;
     --hr-primary-soft: #eef2ff;
     --hr-sidebar-bg: #ffffff;
     --hr-sidebar-text: #4b5563;
-    --hr-sidebar-active-bg: #f5f3ff;
-    --hr-sidebar-active-text: #6366f1;
+    --hr-sidebar-active-bg: #364c3f;
+    --hr-sidebar-active-text: #fff;
     --hr-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     --bs-breadcrumb-divider: '>';
 }
@@ -103,7 +103,6 @@ body.app {
 .sidenav-menu-item:hover,
 .sidenav-menu-item:hover .side-menu__label,
 .sidenav-menu-item:hover .side-menu__icon {
-    background-color: #f9fafb !important;
     color: var(--hr-primary) !important;
     transform: translateX(4px);
 }

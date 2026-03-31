@@ -38,7 +38,7 @@
 
     .login-left {
         flex: 1;
-        background: linear-gradient(135deg, #4f46e5 0%, #1e1b4b 100%);
+        background: linear-gradient(135deg, #1a9e52, #2ecc71);
         padding: 60px;
         display: flex;
         flex-direction: column;
@@ -99,16 +99,15 @@
         border-radius: 12px;
         font-weight: 600;
         font-size: 16px;
-        background: #6366f1 !important;
-        border-color: #6366f1 !important;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        background: #2ecc71 !important;
+        border-color: #2ecc71 !important;
         color: white !important;
         transition: all 0.3s ease;
     }
 
     .btn-login:hover {
-        background: #4f46e5 !important;
-        border-color: #4f46e5 !important;
+        background: #23834b !important;
+        border-color: #23834b !important;
         transform: translateY(-2px);
     }
 

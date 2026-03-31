@@ -35,7 +35,7 @@
                 <h2 class="fw-bold mb-2">Welcome, {{ Auth::user()->name ?? 'Admin' }}! </h2>
                 <p class="mb-0 opacity-75">Here is what's happening today.</p>
             </div>
-            <div class="hero-stats d-flex gap-4 mt-3 mt-md-0 pt-3 pt-md-0 border-top border-md-top-0 border-light border-opacity-25">
+            <div class="hero-stats d-flex gap-4 mt-3 mt-md-0 pt-3 pt-md-0 border-md-top-0 border-light border-opacity-25">
                 <div class="text-center">
                     <h3 class="fw-bold mb-0" id="hero-total-employees">{{ $todayStats['present'] + $todayStats['absent'] }}</h3>
                     <p class="mb-0 small opacity-75">Total Staff</p>
@@ -1279,13 +1279,13 @@
                     datasets: [{
                         label: 'Present Employees',
                         data: weeklyData,
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(111, 247, 172, 0.1)',
                         fill: true,
                         tension: 0.4,
                         borderWidth: 3,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#6366f1',
+                        pointBackgroundColor: '#b2f3c2',
+                        pointBorderColor: '#1a9e52',
                         pointBorderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6

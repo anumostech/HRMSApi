@@ -1,8 +1,8 @@
 /* Modern HR Dashboard Styles */
 
 :root {
-    --hr-primary: #6366f1;
-    --hr-secondary: #a855f7;
+    --hr-primary: #2ecc71;
+    --hr-secondary: #1a9e52;
     --hr-success: #22c55e;
     --hr-warning: #f59e0b;
     --hr-danger: #ef4444;
@@ -12,7 +12,7 @@
 }
 
 .dashboard-hero {
-    background: linear-gradient(135deg, #4f46e5 0%, #1e1b4b 100%);
+    background: linear-gradient(135deg, #1a9e52 0%, #2ecc71 100%);
     border-radius: 20px;
     padding: 30px;
     color: white;
@@ -96,7 +96,7 @@
 .nav-pills-custom .nav-link.active {
     background-color: var(--hr-primary);
     color: white;
-    box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 6px rgb(142 225 160 / 30%);
 }
 
 .table-modern thead th {

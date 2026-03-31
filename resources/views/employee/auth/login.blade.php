@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link id="style" href="{{ asset('assets/css/plugins/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <style>
-        :root { --primary: #6366f1; --primary-dark: #4f46e5; }
+        :root { --primary: #54ee76; --primary-dark: #2ecc71; }
 
         body {
             font-family:'Plus Jakarta Sans', sans-serif;
@@ -15,7 +15,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #6366f1 100%);
+            background: linear-gradient(135deg, #1e1b4b 0%, #54ee76 50%, #2ecc71 100%);
         }
 
         .login-wrapper {

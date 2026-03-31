@@ -202,7 +202,7 @@
                                         class="nav-link user-dropdown gap-2 d-flex align-items-center">
                                         <div class="avatar-container">
                                             <img src="{{ Auth::user()->avatar_url }}"
-                                                onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=0D9C1E&background=e7f5e9'"
+                                                onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=ffff&background=2ecc71'"
                                                 alt="profile-user" class="profile-user avatar cover-image">
                                         </div>
                                         <div class="media-body d-lg-block d-none ps-1">
@@ -216,7 +216,7 @@
                                         <div class="drop-heading p-3 border-bottom bg-light rounded-top">
                                             <div class="d-flex align-items-center gap-3">
                                                 <img src="{{ Auth::user()->avatar_url }}"
-                                                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=0D9C1E&background=e7f5e9'"
+                                                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=ffff&background=2ecc71'"
                                                     alt="profile-user" class="avatar avatar-md rounded-3">
                                                 <div class="overflow-hidden">
                                                     <h6 class="text-dark fw-bold mb-0 text-truncate">

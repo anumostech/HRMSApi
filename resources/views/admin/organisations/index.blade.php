@@ -3,22 +3,21 @@
 @section('title', 'Organizations')
 
 @section('content')
-<div class="page-header mt-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="page-title">Organization Management</h1>
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Organizations</li>
-            </ol>
-        </div>
-        <a href="{{ route('organizations.create') }}" class="btn btn-primary">
-            <i class="fe fe-plus"></i> Add Organization
-        </a>
-    </div>
-</div>
-
 <div class="row mt-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="page-title">Organization Management</h1>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Organizations</li>
+                </ol>
+            </div>
+            <a href="{{ route('organizations.create') }}" class="btn btn-primary">
+                <i class="fe fe-plus"></i> Add Organization
+            </a>
+        </div>
+    </div>
     <div class="col-12">
         <div class="card shadow-sm border-0">
             <div class="card-body">
@@ -40,11 +39,11 @@
                             <tr>
                                 <td>
                                     @if($org->logo)
-                                        <img src="{{ asset('storage/' . $org->logo) }}" alt="Logo" class="avatar avatar-sm rounded-circle shadow-sm">
+                                    <img src="{{ asset('storage/' . $org->logo) }}" alt="Logo" class="avatar avatar-sm rounded-circle shadow-sm">
                                     @else
-                                        <div class="avatar avatar-sm rounded-circle bg-light text-muted d-flex align-items-center justify-content-center">
-                                            <i class="fe fe-briefcase"></i>
-                                        </div>
+                                    <div class="avatar avatar-sm rounded-circle bg-light text-muted d-flex align-items-center justify-content-center">
+                                        <i class="fe fe-briefcase"></i>
+                                    </div>
                                     @endif
                                 </td>
                                 <td>
@@ -54,10 +53,10 @@
                                 <td>{{ $org->email ?? 'N/A' }}</td>
                                 <td>
                                     @if($org->has_multiple_companies)
-                                        <span class="badge bg-success-transparent text-success">Yes</span>
-                                        <a href="{{ route('companies.index', ['organisation_id' => $org->id]) }}" class="ms-2 small text-primary">Manage Companies</a>
+                                    <span class="badge bg-success-transparent text-success">Yes</span>
+                                    <a href="{{ route('companies.index', ['organisation_id' => $org->id]) }}" class="ms-2 small text-primary">Manage Companies</a>
                                     @else
-                                        <span class="badge bg-light text-muted">No</span>
+                                    <span class="badge bg-light text-muted">No</span>
                                     @endif
                                 </td>
                                 <td>{{ $org->created_at->format('d M, Y') }}</td>

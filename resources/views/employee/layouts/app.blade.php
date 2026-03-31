@@ -17,7 +17,7 @@
     <style>
         :root {
             --primary: #6366f1;
-            --primary-dark: #4f46e5;
+            --primary-dark: #2ecc71;
             --sidebar-w: 260px;
         }
 
@@ -32,7 +32,7 @@
             left: 0;
             width: var(--sidebar-w);
             height: 100vh;
-            background: linear-gradient(180deg, #7e7fa9 0%, #7e7fa9 100%);
+            background: #496249;
             display: flex;
             flex-direction: column;
             z-index: 1000;

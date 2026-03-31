@@ -1872,6 +1872,7 @@ button.btn-close:focus {
 
 .btn:not(:disabled):not(.disabled) {
   cursor: pointer;
+  border-radius:40px;
 }
 
 .btn:not(:disabled):not(.disabled):active,
