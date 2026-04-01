@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
-        $schedule->command('documents:check-expiry')->everyMinute();
+        $schedule->command('documents:check-expiry')->daily();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

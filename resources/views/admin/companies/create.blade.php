@@ -31,7 +31,7 @@
                             <select name="organisation_id" id="organisation_id" class="form-select select2" required>
                                 <option value="">Select Organization</option>
                                 @foreach($organisations as $org)
-                                    <option value="{{ $org->id }}" {{ (old('organisation_id') == $org->id || $organisation_id == $org->id) ? 'selected' : '' }}>
+                                    <option value="{{ $org->id }}" selected="selected">
                                         {{ $org->org_name }}
                                     </option>
                                 @endforeach

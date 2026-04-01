@@ -202,7 +202,7 @@
                                         class="nav-link user-dropdown gap-2 d-flex align-items-center">
                                         <div class="avatar-container">
                                             <img src="{{ Auth::user()->avatar_url }}"
-                                                onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=0D9C1E&background=e7f5e9'"
+                                                onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=ffff&background=2ecc71'"
                                                 alt="profile-user" class="profile-user avatar cover-image">
                                         </div>
                                         <div class="media-body d-lg-block d-none ps-1">
@@ -216,7 +216,7 @@
                                         <div class="drop-heading p-3 border-bottom bg-light rounded-top">
                                             <div class="d-flex align-items-center gap-3">
                                                 <img src="{{ Auth::user()->avatar_url }}"
-                                                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=0D9C1E&background=e7f5e9'"
+                                                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=ffff&background=2ecc71'"
                                                     alt="profile-user" class="avatar avatar-md rounded-3">
                                                 <div class="overflow-hidden">
                                                     <h6 class="text-dark fw-bold mb-0 text-truncate">
@@ -292,8 +292,8 @@
                                     </a>
                                 </li>
                                 <li class="slide">
-                                    <a class="sidenav-menu-item {{ request()->routeIs('organizations.index') ? 'active' : '' }}"
-                                        href="{{ route('organizations.index') }}">
+                                    <a class="sidenav-menu-item {{ request()->routeIs('companies.index') ? 'active' : '' }}"
+                                        href="{{ route('companies.index') }}">
                                         <i class="side-menu__icon fe fe-briefcase"></i>
                                         <span class="side-menu__label">Organizations</span>
                                     </a>
@@ -455,10 +455,10 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // fetchStats();
-            checkNotifications();
+            // checkNotifications();
 
             // Poll for notifications every 30 seconds
-            setInterval(checkNotifications, 30000);
+            // setInterval(checkNotifications, 30000);
 
             // Password Eye Toggle
             $('input[type="password"]').each(function () {
@@ -481,32 +481,32 @@
             });
         });
 
-        function checkNotifications() {
-            axios.get('{{ route("dashboard.notifications") }}')
-                .then(response => {
-                    const notifications = response.data;
+        // function checkNotifications() {
+        //     axios.get('{{ route("dashboard.notifications") }}')
+        //         .then(response => {
+        //             const notifications = response.data;
 
-                    if (notifications.length > 0) {
+        //             if (notifications.length > 0) {
 
-                        const Toast = Swal.mixin({
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 3000,
-                            timerProgressBar: true,
-                        });
+        //                 const Toast = Swal.mixin({
+        //                     toast: true,
+        //                     position: 'top-end',
+        //                     showConfirmButton: false,
+        //                     timer: 3000,
+        //                     timerProgressBar: true,
+        //                 });
 
-                        Toast.fire({
-                            iconHtml: '<i class="fa fa-bell" style="color:#f59e0b;font-size:18px;"></i>',
-                            title: `You have ${notifications.length} new notifications`,
-                            customClass: {
-                                icon: 'no-border'
-                            }
-                        });
-                    }
-                })
-                .catch(error => console.error('Error fetching notifications:', error));
-        }
+        //                 Toast.fire({
+        //                     iconHtml: '<i class="fa fa-bell" style="color:#f59e0b;font-size:18px;"></i>',
+        //                     title: `You have ${notifications.length} new notifications`,
+        //                     customClass: {
+        //                         icon: 'no-border'
+        //                     }
+        //                 });
+        //             }
+        //         })
+        //         .catch(error => console.error('Error fetching notifications:', error));
+        // }
 
         function markSingleAsRead(id) {
             let url = "{{ route('dashboard.notifications.read', ':id') }}";

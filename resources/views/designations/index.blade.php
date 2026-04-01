@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Designations')
+
 @section('content')
 <div class="row w-100">
     <div class="col-lg-12 mx-auto">
