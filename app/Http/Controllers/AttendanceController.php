@@ -26,7 +26,7 @@ class AttendanceController extends Controller
     {
         $companies = Company::all();
 
-        $perPage = $request->get('per_page', 15);
+        $perPage = $request->get('per_page', 100);
 
         $query = AttendanceLog::with(['company', 'user'])
             ->select(
@@ -102,7 +102,7 @@ class AttendanceController extends Controller
         $attendance = $query->groupBy('company_id', 'userid', 'date')
             ->orderBy('date', 'desc')
             ->orderBy('punch_in', 'desc')
-            ->get();
+            ->paginate($perPage);
 
         // Stats for cards
         $today = Carbon::today()->toDateString();

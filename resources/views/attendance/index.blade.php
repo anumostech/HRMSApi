@@ -2,6 +2,21 @@
 
 @section('title', 'Attendance Listing')
 
+@section('styles')
+<link href="{{ asset('assets/css/dashboard_modern.css') }}" rel="stylesheet">
+<style>
+    .breadcrumb-item.active {
+        color: #6366f1;
+        font-weight: 600;
+    }
+
+    .page-title {
+        font-weight: 700;
+        color: #1e293b;
+    }
+</style>
+@endsection
+
 @section('content')
 <!-- PAGE-HEADER -->
 <div class="page-header">
@@ -18,71 +33,86 @@
 <!-- Summary Cards -->
 <div class="row">
     <div class="col-sm-6 col-md-6 col-lg-6 col-xl-2">
-        <div class="card overflow-hidden">
-            <div class="card-body">
-                <div class="text-center">
-                    <h6 class="mb-1">
-                        <span class="me-1">
-                            <i class="fe fe-users fs-16 text-primary"></i>
-                        </span>Total Employees</h6>
-                    <h2 class="mb-0 number-font fs-20">{{ $stats['total'] }}</h2>
+        <a href="{{ route('employees.index') }}">
+            <div class="card overflow-hidden stat-card">
+                <div class="card-body">
+                    <div class="text-center">
+                        <h6 class="mb-1">
+                            <span class="me-1">
+                                <i class="fe fe-users fs-16 text-primary"></i>
+                            </span>Total Employees
+                        </h6>
+                        <h2 class="mb-0 number-font fs-20">{{ $stats['total'] }}</h2>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-6 col-md-6 col-lg-6 col-xl-2">
-        <div class="card overflow-hidden">
-            <div class="card-body">
-                <div class="text-center">
-                    <h6 class="mb-1">
-                        <span class="me-1">
-                            <i class="fe fe-log-in fs-16 text-success"></i>
-                        </span>Punched In Today</h6>
-                    <h2 class="mb-0 number-font fs-20 text-success">{{ $stats['punched_in'] }}</h2>
+        <a href="{{ route('attendance.punchInToday') }}">
+            <div class="card overflow-hidden stat-card">
+                <div class="card-body">
+                    <div class="text-center">
+                        <h6 class="mb-1">
+                            <span class="me-1">
+                                <i class="fe fe-log-in fs-16 text-success"></i>
+                            </span>Punched In Today
+                        </h6>
+                        <h2 class="mb-0 number-font fs-20 text-success">{{ $stats['punched_in'] }}</h2>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-6 col-md-6 col-lg-6 col-xl-2">
-        <div class="card overflow-hidden">
-            <div class="card-body">
-                <div class="text-center">
-                    <h6 class="mb-1">
-                        <span class="me-1">
-                            <i class="fe fe-clock text-warning fs-16"></i>
-                        </span>Late Today</h6>
-                    <h2 class="mb-0 number-font fs-20 text-muted">{{ $stats['punched_late'] }}</h2>
+        <a href="{{ route('attendance.late') }}">
+            <div class="card overflow-hidden stat-card">
+                <div class="card-body">
+                    <div class="text-center">
+                        <h6 class="mb-1">
+                            <span class="me-1">
+                                <i class="fe fe-clock text-warning fs-16"></i>
+                            </span>Late Today
+                        </h6>
+                        <h2 class="mb-0 number-font fs-20 text-muted">{{ $stats['punched_late'] }}</h2>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-6 col-md-6 col-lg-6 col-xl-2">
-        <div class="card overflow-hidden">
-            <div class="card-body">
-                <div class="text-center">
-                    <h6 class="mb-1">
-                        <span class="me-1">
-                            <i class="fe fe-x-circle text-danger fs-16"></i>
-                        </span>
-                        Absent Today</h6>
-                    <h2 class="mb-0 number-font fs-20 text-primary">{{ $stats['absent_today'] }}</h2>
+        <a href="{{ route('attendance.absent') }}">
+            <div class="card overflow-hidden stat-card">
+                <div class="card-body">
+                    <div class="text-center">
+                        <h6 class="mb-1">
+                            <span class="me-1">
+                                <i class="fe fe-x-circle text-danger fs-16"></i>
+                            </span>
+                            Absent Today
+                        </h6>
+                        <h2 class="mb-0 number-font fs-20 text-primary">{{ $stats['absent_today'] }}</h2>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-6 col-md-6 col-lg-6 col-xl-2">
-        <div class="card overflow-hidden">
-            <div class="card-body">
-                <div class="text-center">
-                    <h6 class="mb-1">
-                        <span class="me-1">
-                            <i class="fe fe-log-out text-danger fs-16"></i>
-                        </span>
-                        Punch Out Yesterday</h6>
-                    <h2 class="mb-0 number-font fs-20 text-info">{{ $stats['punch_out_yesterday'] }}</h2>
+        <a href="{{ route('attendance.punchOutYesterday') }}">
+            <div class="card overflow-hidden stat-card">
+                <div class="card-body">
+                    <div class="text-center">
+                        <h6 class="mb-1">
+                            <span class="me-1">
+                                <i class="fe fe-log-out text-danger fs-16"></i>
+                            </span>
+                            Punch Out Yesterday
+                        </h6>
+                        <h2 class="mb-0 number-font fs-20 text-info">{{ $stats['punch_out_yesterday'] }}</h2>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -101,14 +131,16 @@
                     <div class="row align-items-end">
                         <div class="col-md-3">
                             <label for="company_id" class="form-label">Company</label>
-                            <select name="company_id" id="company_id" class="form-control">
-                                <option value="">All Companies</option>
-                                @foreach($companies as $company)
-                                <option value="{{ $company->id }}" {{ request('company_id') == $company->id ? 'selected' : '' }}>
-                                    {{ $company->company_name }}
-                                </option>
-                                @endforeach
-                            </select>
+                            <div class="select-wrapper">
+                                <select name="company_id" id="company_id" class="form-control">
+                                    <option value="">All Companies</option>
+                                    @foreach($companies as $company)
+                                    <option value="{{ $company->id }}" {{ request('company_id') == $company->id ? 'selected' : '' }}>
+                                        {{ $company->company_name }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label for="employee_name" class="form-label">Employee Name</label>
@@ -142,7 +174,7 @@
                 </form>
 
                 <div class="table-responsive">
-                    <table class="table table-modern text-nowrap" id="basic-datatable">
+                    <table class="table table-modern text-nowrap">
                         <thead>
                             <tr>
                                 <th>Sl.No.</th>
@@ -157,7 +189,7 @@
                             @forelse($attendance as $key => $record)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $record->company->name }}</td>
+                                <td>{{ $record->company->company_name }}</td>
                                 <td>{{ $record->user->name ?? 'N/A' }}</td>
                                 <td>{{ \Carbon\Carbon::parse($record->date)->format('d-m-Y') }}</td>
                                 <td>
@@ -188,9 +220,9 @@
                         </tbody>
                     </table>
                 </div>
-
+                {{ $attendance->links() }}
                 <div>
-                
+
                 </div>
                 @endsection
 

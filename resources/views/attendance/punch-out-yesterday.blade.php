@@ -68,7 +68,7 @@
                 </form>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered text-nowrap border-bottom" id="basic-datatable">
+                    <table class="table table-modern text-nowrap" id="basic-datatable">
                         <thead>
                             <tr>
                                 <th>Sl.No.</th>
