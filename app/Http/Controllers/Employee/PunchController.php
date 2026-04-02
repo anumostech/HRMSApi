@@ -19,7 +19,7 @@ class PunchController extends Controller
 
         // Check if already punched in
         $hasPunched = AttendanceLog::where('userid', $employee->employee_id)
-            ->whereDate('timestamp', $today)
+            ->whereDate('log_date', $today)
             ->exists();
 
         if ($hasPunched) {
@@ -29,7 +29,8 @@ class PunchController extends Controller
         AttendanceLog::create([
             'company_id' => $employee->company_id ?? 1,
             'userid' => $employee->employee_id,
-            'timestamp' => Carbon::now(),
+            'log_date' => $today,
+            'punch_in' => Carbon::now(),
             'status' => 1,
             'log_status' => 'IN'
         ]);
@@ -48,33 +49,30 @@ class PunchController extends Controller
         $employee = Auth::guard('employee')->user();
         $today = Carbon::today()->format('Y-m-d');
 
-        // Verify if punch in exists and no punch out exists yet
-        $logs = AttendanceLog::where('userid', $employee->employee_id)
-            ->whereDate('timestamp', $today)
-            ->orderBy('timestamp', 'asc')
-            ->get();
+        // Find today's attendance record
+        $log = AttendanceLog::where('userid', $employee->employee_id)
+            ->whereDate('log_date', $today)
+            ->first();
 
-        if ($logs->count() == 0) {
+        if (!$log) {
             return redirect()->back()->with('error', 'You have not punched in yet.');
         }
-        if ($logs->count() >= 2) {
+
+        if ($log->punch_out) {
             return redirect()->back()->with('error', 'Already punched out today.');
         }
 
         // Save Task Report
         TaskReport::create([
-            'employee_id' => $employee->id,
+            'employee_id' => $employee->employee_id,
             'date' => $today,
             'tasks_completed' => $request->tasks_completed,
             'plan_tomorrow' => $request->plan_tomorrow,
             'remarks' => $request->remarks
         ]);
 
-        // Create punch out record
-        AttendanceLog::create([
-            'company_id' => $employee->company_id ?? 1,
-            'userid' => $employee->employee_id,
-            'timestamp' => Carbon::now(),
+        $log->update([
+            'punch_out' => Carbon::now(),
             'log_status' => 'OUT'
         ]);
 
