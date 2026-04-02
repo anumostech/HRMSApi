@@ -55,10 +55,11 @@ class Employee extends Authenticatable
     }
 
     protected $fillable = [
-        'name',
-        'organization',
+        'first_name',
+        'last_name',
+        'organization_id',
         'employee_id',
-        'designation',
+        'designation_id',
         'department_id',
         'company_id',
         'dob',
@@ -133,6 +134,11 @@ class Employee extends Authenticatable
     public function department()
     {
         return $this->belongsTo(Department::class, 'department_id');
+    }
+
+     public function designation()
+    {
+        return $this->belongsTo(Designation::class, 'designation_id');
     }
 
     public function attendanceLogs()

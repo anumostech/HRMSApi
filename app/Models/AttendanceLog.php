@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AttendanceLog extends Model
 {
-    protected $fillable = ['company_id', 'userid', 'timestamp', 'status', 'device_id'];
+    protected $fillable = ['company_id', 'userid', 'log_date', 'punch_in', 'punch_out', 'status', 'device_id', 'log_status'];
 
     public function company()
     {

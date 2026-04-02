@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Organisation extends Model
+class Organization extends Model
 {
     use SoftDeletes;
 
@@ -24,6 +24,6 @@ class Organisation extends Model
 
     public function companies()
     {
-        return $this->hasMany(Company::class, 'organisation_id');
+        return $this->hasMany(Company::class, 'organization_id');
     }
 }

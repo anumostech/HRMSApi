@@ -11,7 +11,7 @@ class Company extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'organisation_id',
+        'organization_id',
         'company_name',
         'phone',
         'email',
@@ -19,9 +19,9 @@ class Company extends Model
         'address'
     ];
 
-    public function organisation()
+    public function organization()
     {
-        return $this->belongsTo(Organisation::class, 'organisation_id');
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
     public function attendanceLogs()

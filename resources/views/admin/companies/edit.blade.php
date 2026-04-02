@@ -9,7 +9,7 @@
             <h1 class="page-title">Edit Company: {{ $company->company_name }}</h1>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('companies.index', ['organisation_id' => $company->organisation_id]) }}">Companies</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('companies.index', ['organization_id' => $company->organization_id]) }}">Companies</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Edit</li>
             </ol>
         </div>
@@ -28,11 +28,11 @@
                     @method('PUT')
                     <div class="row">
                         <div class="col-md-12 mb-3">
-                            <label class="form-label" for="organisation_id">Parent Organization <span class="text-danger">*</span></label>
-                            <select name="organisation_id" id="organisation_id" class="form-select select2" required>
+                            <label class="form-label" for="organization_id">Parent Organization <span class="text-danger">*</span></label>
+                            <select name="organization_id" id="organization_id" class="form-select select2" required>
                                 <option value="">Select Organization</option>
-                                @foreach($organisations as $org)
-                                    <option value="{{ $org->id }}" {{ (old('organisation_id', $company->organisation_id) == $org->id) ? 'selected' : '' }}>
+                                @foreach($organizations as $org)
+                                    <option value="{{ $org->id }}" {{ (old('organization_id', $company->organization_id) == $org->id) ? 'selected' : '' }}>
                                         {{ $org->org_name }}
                                     </option>
                                 @endforeach
@@ -57,7 +57,7 @@
 
                         <div class="col-md-12 mt-4 text-end">
                             <button type="submit" class="btn btn-primary px-5">Update Company</button>
-                            <a href="{{ route('companies.index', ['organisation_id' => $company->organisation_id]) }}" class="btn btn-light ms-2 px-5">Cancel</a>
+                            <a href="{{ route('companies.index', ['organization_id' => $company->organization_id]) }}" class="btn btn-light ms-2 px-5">Cancel</a>
                         </div>
                     </div>
                 </form>

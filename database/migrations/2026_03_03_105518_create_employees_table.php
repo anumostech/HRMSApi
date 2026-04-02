@@ -12,9 +12,10 @@ return new class extends Migration {
     {
         Schema::create('employees', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('first_name');
+            $table->string('last_name')->nullable();
             $table->string('employee_id');
-            $table->string('designation')->nullable();
+            $table->string('designation_id')->nullable();
             $table->foreignId('organization_id');
             $table->foreignId('company_id');
             $table->foreignId('department_id');

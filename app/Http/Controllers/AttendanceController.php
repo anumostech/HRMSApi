@@ -8,7 +8,10 @@ use App\Models\Employee;
 use App\Services\AttendanceParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\AttendanceUpload;
+use App\Jobs\ProcessAttendanceJob;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceController extends Controller
 {
@@ -32,28 +35,28 @@ class AttendanceController extends Controller
             ->select(
                 'company_id',
                 'userid',
-                DB::raw("DATE(timestamp) as date"),
+                DB::raw("log_date as date"),
 
                 DB::raw("
                         CASE 
-                            WHEN TIME(MIN(timestamp)) <= '12:00:00' 
-                            THEN MIN(timestamp) 
+                            WHEN TIME(MIN(punch_in)) <= '12:00:00' 
+                            THEN MIN(punch_in) 
                             ELSE NULL
                         END as punch_in
                     "),
 
                 DB::raw("
                         CASE 
-                            WHEN TIME(MAX(timestamp)) >= '12:00:00'
-                            THEN MAX(timestamp) 
+                            WHEN TIME(MAX(punch_out)) >= '12:00:00'
+                            THEN MAX(punch_out) 
                             ELSE NULL
                         END as punch_out
                     "),
 
                 DB::raw("
                         CASE 
-                            WHEN TIME(MIN(timestamp)) >= '08:11:00' 
-                                AND TIME(MIN(timestamp)) <= '12:00:00' 
+                            WHEN TIME(MIN(punch_in)) >= '08:11:00' 
+                                AND TIME(MIN(punch_in)) <= '12:00:00' 
                             THEN 'Late Comer' 
                             ELSE 'On Time' 
                         END as status
@@ -77,20 +80,20 @@ class AttendanceController extends Controller
             $now = Carbon::now();
             switch ($request->date_preset) {
                 case 'today':
-                    $query->whereDate('timestamp', $now->toDateString());
+                    $query->whereDate('punch_in', $now->toDateString());
                     break;
                 case 'yesterday':
-                    $query->whereDate('timestamp', $now->subDay()->toDateString());
+                    $query->whereDate('punch_in', $now->subDay()->toDateString());
                     break;
                 case 'last_week':
-                    $query->whereBetween('timestamp', [$now->subWeek()->startOfDay(), Carbon::now()->endOfDay()]);
+                    $query->whereBetween('punch_in', [$now->subWeek()->startOfDay(), Carbon::now()->endOfDay()]);
                     break;
                 case 'last_month':
-                    $query->whereBetween('timestamp', [$now->subMonth()->startOfDay(), Carbon::now()->endOfDay()]);
+                    $query->whereBetween('punch_in', [$now->subMonth()->startOfDay(), Carbon::now()->endOfDay()]);
                     break;
                 case 'custom':
                     if ($request->filled('from_date') && $request->filled('to_date')) {
-                        $query->whereBetween('timestamp', [
+                        $query->whereBetween('log_date', [
                             Carbon::parse($request->from_date)->startOfDay(),
                             Carbon::parse($request->to_date)->endOfDay()
                         ]);
@@ -111,13 +114,13 @@ class AttendanceController extends Controller
         $inactiveEmployees = Employee::onlyInactive()->count();
         $totalEmployees = $activeEmployees + $inactiveEmployees;
 
-        $todayLogs = AttendanceLog::whereDate('timestamp', $today)
-            ->select('userid', DB::raw('MIN(timestamp) as punch_in'), DB::raw('MAX(timestamp) as punch_out'))
+        $todayLogs = AttendanceLog::whereDate('log_date', $today)
+            ->select('userid', DB::raw('MIN(punch_in) as punch_in'), DB::raw('MAX(punch_out) as punch_out'))
             ->groupBy('userid')
             ->get();
 
-        $yesterdaysLogs = AttendanceLog::whereDate('timestamp', $yesterday)
-            ->select('userid', DB::raw('MIN(timestamp) as punch_in'), DB::raw('MAX(timestamp) as punch_out'))
+        $yesterdaysLogs = AttendanceLog::whereDate('log_date', $yesterday)
+            ->select('userid', DB::raw('MIN(punch_in) as punch_in'), DB::raw('MAX(punch_out) as punch_out'))
             ->groupBy('userid')
             ->get();
 
@@ -692,67 +695,150 @@ class AttendanceController extends Controller
     /**
      * Store uploaded attendance logs.
      */
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'company_id' => 'required|exists:companies,id',
+    //         'file' => 'required|file',
+    //     ]);
+
+    //     $companyId = $request->company_id;
+    //     $file = $request->file('file');
+    //     $content = file_get_contents($file->getRealPath());
+    //     $extension = $file->getClientOriginalExtension();
+
+    //     $parsedData = $this->parser->parse($content, $extension);
+
+    //     // Group data by user and date to find first/last entries
+    //     $grouped = collect($parsedData)->groupBy(function ($data) {
+    //         return $data['userid'] . '_' . Carbon::parse($data['timestamp'])->format('Y-m-d');
+    //     });
+
+    //     $processed = 0;
+    //     $skipped = 0;
+
+    //     // foreach ($grouped as $logs) {
+    //     //     $sorted = $logs->sortBy('timestamp');
+    //     //     $first = $sorted->first();
+    //     //     $last = $sorted->last();
+
+    //     //     try {
+    //     //         // Store Punch In (First Entry)
+    //     //         AttendanceLog::firstOrCreate([
+    //     //             'company_id' => $companyId,
+    //     //             'userid' => $first['userid'],
+    //     //             'punch_in' => $first['timestamp'],
+    //     //             'punch_out' => $last['timestamp'],
+    //     //         ], [
+    //     //             'status' => $first['status'],
+    //     //             'device_id' => $first['device_id'],
+    //     //         ]);
+    //     //         $processed++;
+
+    //     // Store Punch Out (Last Entry if different)
+    //     // if ($first['timestamp'] != $last['timestamp']) {
+    //     //     AttendanceLog::firstOrCreate([
+    //     //         'company_id' => $companyId,
+    //     //         'userid' => $last['userid'],
+    //     //         'timestamp' => $last['timestamp'],
+    //     //     ], [
+    //     //         'status' => $last['status'],
+    //     //         'device_id' => $last['device_id'],
+    //     //     ]);
+    //     //     $processed++;
+    //     // }
+    //     //     } catch (\Exception $e) {
+    //     //         $skipped++;
+    //     //     }
+    //     // }
+
+    //     foreach ($grouped as $logs) {
+    //         $sorted = $logs->sortBy('timestamp');
+    //         $first = $sorted->first();
+    //         $last = $sorted->last();
+
+    //         $date = Carbon::parse($first['timestamp'])->format('Y-m-d');
+
+    //         $punchIn = $first['timestamp'];
+    //         $punchOut = ($first['timestamp'] != $last['timestamp'])
+    //             ? $last['timestamp']
+    //             : null;
+
+    //         try {
+    //             AttendanceLog::updateOrCreate(
+    //                 [
+    //                     'company_id' => $companyId,
+    //                     'userid' => $first['userid'],
+    //                     'date' => $date,
+    //                 ],
+    //                 [
+    //                     'punch_in' => $punchIn,
+    //                     'punch_out' => $punchOut,
+    //                     'status' => $first['status'] ?? null,
+    //                     'device_id' => $first['device_id'] ?? null,
+    //                 ]
+    //             );
+
+    //             $processed++;
+    //         } catch (\Exception $e) {
+    //             $skipped++;
+    //         }
+    //     }
+
+    //     // Trigger Late/Absent Checks
+    //     $this->notifyHRAboutLatecomers($companyId);
+    //     $this->notifyHRAboutAbsentees($companyId);
+
+    //     return redirect()->route('attendance.index')->with('success', "Processed $processed records from " . count($grouped) . " daily logs.");
+    // }
+
     public function store(Request $request)
     {
         $request->validate([
-            'company_id' => 'required|exists:companies,id',
-            'file' => 'required|file',
+            'file' => 'required|file|mimes:dat,csv,txt|max:2048',
+            'company_id' => 'required|exists:companies,id'
         ]);
 
-        $companyId = $request->company_id;
-        $file = $request->file('file');
-        $content = file_get_contents($file->getRealPath());
-        $extension = $file->getClientOriginalExtension();
+        try {
 
-        $parsedData = $this->parser->parse($content, $extension);
+            $path = $request->file('file')->store('attendance');
 
-        // Group data by user and date to find first/last entries
-        $grouped = collect($parsedData)->groupBy(function ($data) {
-            return $data['userid'] . '_' . Carbon::parse($data['timestamp'])->format('Y-m-d');
-        });
+            $upload = AttendanceUpload::create([
+                'file_path' => $path,
+                'company_id' => $request->company_id, 
+                'status' => 'pending',
+                'progress' => 0
+            ]);
 
-        $processed = 0;
-        $skipped = 0;
+            ProcessAttendanceJob::dispatch($upload->id, $request->company_id);
 
-        foreach ($grouped as $logs) {
-            $sorted = $logs->sortBy('timestamp');
-            $first = $sorted->first();
-            $last = $sorted->last();
+            return response()->json([
+                'success' => true,
+                'upload_id' => $upload->id
+            ]);
+        } catch (\Exception $e) {
 
-            try {
-                // Store Punch In (First Entry)
-                AttendanceLog::firstOrCreate([
-                    'company_id' => $companyId,
-                    'userid' => $first['userid'],
-                    'timestamp' => $first['timestamp'],
-                ], [
-                    'status' => $first['status'],
-                    'device_id' => $first['device_id'],
-                ]);
-                $processed++;
+            Log::error($e);
 
-                // Store Punch Out (Last Entry if different)
-                if ($first['timestamp'] != $last['timestamp']) {
-                    AttendanceLog::firstOrCreate([
-                        'company_id' => $companyId,
-                        'userid' => $last['userid'],
-                        'timestamp' => $last['timestamp'],
-                    ], [
-                        'status' => $last['status'],
-                        'device_id' => $last['device_id'],
-                    ]);
-                    $processed++;
-                }
-            } catch (\Exception $e) {
-                $skipped++;
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Upload failed'
+            ], 500);
+        }
+    }
+
+    public function progress($id)
+    {
+        $upload = AttendanceUpload::find($id);
+
+        if (!$upload) {
+            return response()->json([
+                'status' => 'not_found',
+                'progress' => 0
+            ], 404);
         }
 
-        // Trigger Late/Absent Checks
-        $this->notifyHRAboutLatecomers($companyId);
-        $this->notifyHRAboutAbsentees($companyId);
-
-        return redirect()->route('attendance.index')->with('success', "Processed $processed records from " . count($grouped) . " daily logs.");
+        return response()->json($upload);
     }
 
     private function notifyHRAboutLatecomers($companyId)
@@ -761,8 +847,8 @@ class AttendanceController extends Controller
         $monthStart = Carbon::now()->startOfMonth();
 
         $lateEmployees = AttendanceLog::where('company_id', $companyId)
-            ->whereBetween('timestamp', [$monthStart, Carbon::now()])
-            ->whereRaw("TIME(timestamp) >= '08:11:00' AND TIME(timestamp) <= '12:00:00'")
+            ->whereBetween('punch_in', [$monthStart, Carbon::now()])
+            ->whereRaw("TIME(punch_in) >= '08:11:00' AND TIME(punch_in) <= '12:00:00'")
             ->select('userid', DB::raw('count(*) as late_count'))
             ->groupBy('userid')
             ->having('late_count', '>=', 3)
@@ -788,7 +874,7 @@ class AttendanceController extends Controller
 
         foreach ($activeEmployees as $employee) {
             $punchedIn = AttendanceLog::where('userid', $employee->id)
-                ->whereDate('timestamp', $today)
+                ->whereDate('log_date', $today)
                 ->exists();
 
             if (!$punchedIn) {

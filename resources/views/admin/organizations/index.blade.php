@@ -35,7 +35,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($organisations as $org)
+                            @foreach($organizations as $org)
                             <tr>
                                 <td>
                                     @if($org->logo)
@@ -54,7 +54,7 @@
                                 <td>
                                     @if($org->has_multiple_companies)
                                     <span class="badge bg-success-transparent text-success">Yes</span>
-                                    <a href="{{ route('companies.index', ['organisation_id' => $org->id]) }}" class="ms-2 small text-primary">Manage Companies</a>
+                                    <a href="{{ route('companies.index', ['organization_id' => $org->id]) }}" class="ms-2 small text-primary">Manage Companies</a>
                                     @else
                                     <span class="badge bg-light text-muted">No</span>
                                     @endif

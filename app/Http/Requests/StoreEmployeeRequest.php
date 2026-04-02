@@ -66,10 +66,11 @@ class StoreEmployeeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'organization' => 'nullable|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'organization_id' => 'nullable|exists:organizations,id',
             'employee_id' => 'nullable|unique:employees,employee_id',
-            'designation' => 'nullable|string|max:255',
+            'designation_id' => 'nullable|string|max:255',
             'department_id' => 'nullable|string|max:255',
             'company_id' => 'required|exists:companies,id',
             'dob' => 'nullable|date',
@@ -122,6 +123,7 @@ class StoreEmployeeRequest extends FormRequest
             'personal_email' => 'nullable|email|max:255',
             'status' => 'nullable|in:active,inactive',
             'total_leaves_allocated' => 'nullable|integer|min:0',
+            'password' => 'nullable|string|max:255',
         ];
     }
 

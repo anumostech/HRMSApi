@@ -84,7 +84,7 @@
                                             <td>{{ $record->folder }}</td>
 
                                             <!-- Share With -->
-                                            <td>{{ $record->share_with ?? 'All' }}</td>
+                                            <td>{{ $record->shareWith->name ?? 'All' }}</td>
 
                                             <!-- Expiry Date -->
                                             <td>

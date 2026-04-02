@@ -9,13 +9,13 @@
             <h1 class="page-title">Company Management</h1>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                @if($organisation_id)
+                @if($organization_id)
                 <li class="breadcrumb-item"><a href="{{ route('organizations.index') }}">Organizations</a></li>
                 @endif
                 <li class="breadcrumb-item active" aria-current="page">Companies</li>
             </ol>
         </div>
-        <a href="{{ route('companies.create', ['organisation_id' => $organisation_id]) }}" class="btn btn-primary">
+        <a href="{{ route('companies.create', ['organization_id' => $organization_id]) }}" class="btn btn-primary">
             <i class="fe fe-plus"></i> Add Company
         </a>
     </div>
@@ -51,7 +51,7 @@
                                     <div class="fw-semibold">{{ $company->company_name }}</div>
                                 </td>
                                 <td>
-                                    {{ $company->organisation ? $company->organisation->org_name : 'N/A' }}
+                                    {{ $company->organization ? $company->organization->org_name : 'N/A' }}
                                 </td>
                                 <td>{{ $company->phone ?? 'N/A' }}</td>
                                 <td>{{ $company->email ?? 'N/A' }}</td>

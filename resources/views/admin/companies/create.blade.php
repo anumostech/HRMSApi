@@ -9,7 +9,7 @@
             <h1 class="page-title">Add Company</h1>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('companies.index', ['organisation_id' => $organisation_id]) }}">Companies</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('companies.index', ['organization_id' => $organization_id]) }}">Companies</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Add</li>
             </ol>
         </div>
@@ -27,16 +27,16 @@
                     @csrf
                     <div class="row">
                         <div class="col-md-12 mb-3">
-                            <label class="form-label" for="organisation_id">Parent Organization <span class="text-danger">*</span></label>
-                            <select name="organisation_id" id="organisation_id" class="form-select select2" required>
+                            <label class="form-label" for="organization_id">Parent Organization <span class="text-danger">*</span></label>
+                            <select name="organization_id" id="organization_id" class="form-select select2" required>
                                 <option value="">Select Organization</option>
-                                @foreach($organisations as $org)
+                                @foreach($organizations as $org)
                                     <option value="{{ $org->id }}" selected="selected">
                                         {{ $org->org_name }}
                                     </option>
                                 @endforeach
                             </select>
-                            @if($organisations->isEmpty())
+                            @if($organizations->isEmpty())
                                 <small class="text-danger">No organizations found with "Multiple Companies" selected.</small>
                             @endif
                         </div>
@@ -58,8 +58,8 @@
                         </div>
 
                         <div class="col-md-12 mt-4 text-end">
-                            <button type="submit" class="btn btn-primary px-5" {{ $organisations->isEmpty() ? 'disabled' : '' }}>Save Company</button>
-                            <a href="{{ route('companies.index', ['organisation_id' => $organisation_id]) }}" class="btn btn-light ms-2 px-5">Cancel</a>
+                            <button type="submit" class="btn btn-primary px-5" {{ $organizations->isEmpty() ? 'disabled' : '' }}>Save Company</button>
+                            <a href="{{ route('companies.index', ['organization_id' => $organization_id]) }}" class="btn btn-light ms-2 px-5">Cancel</a>
                         </div>
                     </div>
                 </form>

@@ -37,11 +37,11 @@ class DashboardController extends Controller
 
             $totalEmployees = Employee::count();
 
-            $logs = AttendanceLog::whereDate('timestamp', $date)
+            $logs = AttendanceLog::whereDate('log_date', $date)
                 ->select(
                     'userid',
-                    DB::raw('MIN(timestamp) as punch_in'),
-                    DB::raw('MAX(timestamp) as punch_out')
+                    DB::raw('MIN(punch_in) as punch_in'),
+                    DB::raw('MAX(punch_out) as punch_out')
                 )
                 ->groupBy('userid')
                 ->get();
@@ -95,7 +95,7 @@ class DashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i);
 
-            $count = AttendanceLog::whereDate('timestamp', $date)
+            $count = AttendanceLog::whereDate('log_date', $date)
                 ->distinct('userid')
                 ->count('userid');
 
@@ -128,8 +128,8 @@ class DashboardController extends Controller
         $inactiveEmployees = Employee::onlyInactive()->count();
         $totalEmployees = $activeEmployees + $inactiveEmployees;
 
-        $todayLogs = AttendanceLog::whereDate('timestamp', $today)
-            ->select('userid', DB::raw('MIN(timestamp) as punch_in'), DB::raw('MAX(timestamp) as punch_out'))
+        $todayLogs = AttendanceLog::whereDate('log_date', $today)
+            ->select('userid', DB::raw('MIN(punch_in) as punch_in'), DB::raw('MAX(punch_out) as punch_out'))
             ->groupBy('userid')
             ->get();
 
@@ -165,19 +165,19 @@ class DashboardController extends Controller
     {
         // Monthly Attendance (Last 6 months)
         $monthlyAttendance = AttendanceLog::select(
-            DB::raw("DATE_FORMAT(timestamp, '%b %Y') as month"),
-            DB::raw("count(DISTINCT userid, DATE(timestamp)) as count")
+            DB::raw("DATE_FORMAT(log_date, '%b %Y') as month"),
+            DB::raw("count(DISTINCT userid, DATE(log_date)) as count")
         )
-            ->where('timestamp', '>=', Carbon::now()->subMonths(6))
+            ->where('log_date', '>=', Carbon::now()->subMonths(6))
             ->groupBy('month')
-            ->orderBy(DB::raw('MIN(timestamp)'))
+            ->orderBy(DB::raw('MIN(log_date)'))
             ->get();
 
         // Late Employees Trend (Last 30 days)
         $lateTrend = DB::table('attendance_logs')
-            ->select(DB::raw("DATE(timestamp) as date"), DB::raw("count(*) as count"))
-            ->whereRaw("TIME(timestamp) >= '08:11:00' AND TIME(timestamp) <= '12:00:00'")
-            ->where('timestamp', '>=', Carbon::now()->subDays(30))
+            ->select(DB::raw("DATE(log_date) as date"), DB::raw("count(*) as count"))
+            ->whereRaw("TIME(punch_in) >= '08:11:00' AND TIME(punch_out) <= '12:00:00'")
+            ->where('log_date', '>=', Carbon::now()->subDays(30))
             ->groupBy('date')
             ->orderBy('date')
             ->get();

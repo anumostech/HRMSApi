@@ -17,9 +17,9 @@
                     <img src="{{ $employee->avatar_url }}" alt="Avatar"
                         style="width:80px;height:80px;border-radius:20px;border:4px solid rgba(255,255,255,0.2);object-fit:cover;box-shadow: 0 8px 16px rgba(0,0,0,0.2);">
                     <div>
-                        <h2 class="mb-1 fw-bold">Welcome, {{ explode(' ', $employee->name)[0] }}!</h2>
+                        <h2 class="mb-1 fw-bold">Welcome, {{ $employee->first_name.' '.$employee?->last_name}}!</h2>
                         <p class="mb-0 opacity-75 fs-6">
-                            <i class="fe fe-briefcase me-1"></i> {{ $employee->designation ?? 'Team Member' }}
+                            <i class="fe fe-briefcase me-1"></i> {{ $employee->designation?->name ?? 'Team Member' }}
                             <span class="mx-2">|</span>
                             <i class="fe fe-layers me-1"></i> {{ optional($employee->department)->name ?? 'General' }}
                         </p>

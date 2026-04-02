@@ -367,8 +367,8 @@
             <div class="emp-user-badge">
                 <img src="{{ Auth::guard('employee')->user()->avatar_url }}" alt="Avatar">
                 <div>
-                    <div class="emp-user-name">{{ Auth::guard('employee')->user()->name }}</div>
-                    <div class="emp-user-role">{{ Auth::guard('employee')->user()->designation ?? 'Employee' }}</div>
+                    <div class="emp-user-name">{{ Auth::guard('employee')->user()->first_name }}</div>
+                    <div class="emp-user-role">{{ Auth::guard('employee')->user()->designation?->name ?? 'Employee' }}</div>
                 </div>
             </div>
         </header>

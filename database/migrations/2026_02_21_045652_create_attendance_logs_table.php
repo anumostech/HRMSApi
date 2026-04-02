@@ -15,12 +15,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
             $table->string('userid');
-            $table->dateTime('timestamp');
+            $table->date('log_date')->nullable();
+            $table->dateTime('punch_in')->nullable();
+            $table->dateTime('punch_out')->nullable();
             $table->integer('status')->nullable();
             $table->string('device_id')->nullable();
+            $table->string('log_status')->nullable();
             $table->timestamps();
 
-            $table->unique(['company_id', 'userid', 'timestamp'], 'company_user_time_unique');
+            $table->unique(['company_id', 'userid', 'punch_in', 'punch_out'], 'company_user_time_unique');
         });
     }
 

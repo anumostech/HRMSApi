@@ -30,7 +30,8 @@ class PunchController extends Controller
             'company_id' => $employee->company_id ?? 1,
             'userid' => $employee->employee_id,
             'timestamp' => Carbon::now(),
-            'status' => 'IN'
+            'status' => 1,
+            'log_status' => 'IN'
         ]);
 
         return redirect()->back()->with('success', 'Punched in successfully.');
@@ -74,7 +75,7 @@ class PunchController extends Controller
             'company_id' => $employee->company_id ?? 1,
             'userid' => $employee->employee_id,
             'timestamp' => Carbon::now(),
-            'status' => 'OUT'
+            'log_status' => 'OUT'
         ]);
 
         return redirect()->back()->with('success', 'Punched out successfully and tasks submitted.');

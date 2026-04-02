@@ -67,9 +67,10 @@ class UpdateEmployeeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'sometimes|required|string|max:255',
-            'employee_id' => 'nullable',
-            'designation' => 'nullable|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'organization_id' => 'nullable|exists:organizations,id',
+            'designation_id' => 'nullable|string|max:255',
             'department_id' => 'nullable|string|max:255',
             'company_id' => 'sometimes|required|exists:companies,id',
             'dob' => 'nullable|date',

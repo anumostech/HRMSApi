@@ -7,10 +7,12 @@ use App\Models\Company;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Department;
-use App\Models\Organisation;
+use App\Models\Designation;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 class EmployeeController extends Controller
 {
@@ -19,7 +21,7 @@ class EmployeeController extends Controller
         $status = $request->get('status', 'active');
         $perPage = $request->get('per_page', 15);
 
-        $query = Employee::with(['company', 'department']);
+        $query = Employee::with(['company', 'department', 'designation']);
 
         if ($status === 'inactive') {
             $query = $query->onlyInactive();
@@ -32,11 +34,12 @@ class EmployeeController extends Controller
 
     public function create()
     {
-        $companies = Company::all();
+        $companies = Company::where('organization_id','1')->get();
         $departments = Department::all();
-        $organizations = Organisation::all();
+        $designations = Designation::orderBy('id', 'desc')->get();
+        $organizations = Organization::all();
         $employee = new Employee();
-        return view('employees.create', compact('companies', 'departments', 'organizations', 'employee'));
+        return view('employees.create', compact('companies', 'departments', 'organizations', 'employee', 'designations'));
     }
 
     public function store(StoreEmployeeRequest $request)
@@ -91,6 +94,9 @@ class EmployeeController extends Controller
 
         $data['special_days'] = !empty($specialDays) ? $specialDays : null;
 
+        $data['organization_id'] = 1;
+        $data['password'] = Hash::make('Thesay@ae');
+
         Employee::create($data);
 
         return redirect()->back()->with('success', 'Employee created successfully.');
@@ -105,8 +111,9 @@ class EmployeeController extends Controller
     {
         $companies = Company::all();
         $departments = Department::all();
-        $organizations = Organisation::all();
-        return view('employees.edit', compact('employee', 'companies', 'departments', 'organizations'));
+        $designations = Designation::orderBy('id', 'desc')->get();
+        $organizations = Organization::all();
+        return view('employees.edit', compact('employee', 'companies', 'departments', 'organizations', 'designations'));
     }
 
     public function update(UpdateEmployeeRequest $request, Employee $employee)
@@ -168,6 +175,8 @@ class EmployeeController extends Controller
         }
 
         $data['special_days'] = !empty($specialDays) ? $specialDays : null;
+
+        $data['organization_id'] = 1;
 
         $employee->update($data);
 

@@ -12,13 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('companies', function (Blueprint $table) {
-            if (!Schema::hasColumn('companies', 'organisation_id')) {
-                $table->foreignId('organisation_id')->nullable()->constrained('organisations')->onDelete('cascade');
+            if (!Schema::hasColumn('companies', 'organization_id')) {
+                $table->foreignId('organization_id')->nullable()->constrained('organizations')->onDelete('cascade');
             } else {
-                $table->unsignedBigInteger('organisation_id')->nullable()->change();
+                $table->unsignedBigInteger('organization_id')->nullable()->change();
             }
             
-            $table->string('company_name')->nullable()->after('organisation_id');
+            $table->string('company_name')->nullable()->after('organization_id');
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->string('logo')->nullable();
@@ -37,8 +37,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('companies', function (Blueprint $table) {
-            $table->dropForeign(['organisation_id']);
-            $table->dropColumn(['organisation_id', 'company_name', 'phone', 'email', 'logo', 'address', 'deleted_at']);
+            $table->dropForeign(['organization_id']);
+            $table->dropColumn(['organization_id', 'company_name', 'phone', 'email', 'logo', 'address', 'deleted_at']);
         });
     }
 };

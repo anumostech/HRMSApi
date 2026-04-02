@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
-use App\Models\Organisation;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -11,34 +11,34 @@ class CompanyController extends Controller
 {
     public function index(Request $request)
     {
-        $organisation_id = $request->get('organisation_id');
-        $companies = Company::with('organisation')
-            ->when($organisation_id, function($query) use ($organisation_id) {
-                return $query->where('organisation_id', $organisation_id);
+        $organization_id = $request->get('organization_id');
+        $companies = Company::with('organization')
+            ->when($organization_id, function($query) use ($organization_id) {
+                return $query->where('organization_id', $organization_id);
             })
             ->latest()
             ->get();
         
-        return view('admin.companies.index', compact('companies', 'organisation_id'));
+        return view('admin.companies.index', compact('companies', 'organization_id'));
     }
 
     public function getByOrganization($organization_id)
     {
-        $companies = Company::where('organisation_id', $organization_id)->get();
+        $companies = Company::where('organization_id', $organization_id)->get();
         return response()->json($companies);
     }
 
     public function create(Request $request)
     {
-        $organisation_id = $request->get('organisation_id');
-        $organisations = Organisation::where('has_multiple_companies', true)->get();
-        return view('admin.companies.create', compact('organisation_id', 'organisations'));
+        $organization_id = $request->get('organization_id');
+        $organizations = organization::where('has_multiple_companies', true)->get();
+        return view('admin.companies.create', compact('organization_id', 'organizations'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'organisation_id' => 'required|exists:organisations,id',
+            'organization_id' => 'required|exists:organizations,id',
             'company_name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -53,22 +53,32 @@ class CompanyController extends Controller
             $data['logo'] = $path;
         }
 
-        Company::create($data);
+        $company = Company::create($data);
 
-        return redirect()->route('companies.index', ['organisation_id' => $request->organisation_id])
+        // If AJAX request
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'company' => $company
+            ]);
+        }
+
+        // Normal form submit
+
+        return redirect()->route('companies.index', ['organization_id' => $request->organization_id])
             ->with('success', 'Company created successfully.');
     }
 
     public function edit(Company $company)
     {
-        $organisations = Organisation::where('has_multiple_companies', true)->get();
-        return view('admin.companies.edit', compact('company', 'organisations'));
+        $organizations = organization::where('has_multiple_companies', true)->get();
+        return view('admin.companies.edit', compact('company', 'organizations'));
     }
 
     public function update(Request $request, Company $company)
     {
         $request->validate([
-            'organisation_id' => 'required|exists:organisations,id',
+            'organization_id' => 'required|exists:organizations,id',
             'company_name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -89,15 +99,15 @@ class CompanyController extends Controller
 
         $company->update($data);
 
-        return redirect()->route('companies.index', ['organisation_id' => $company->organisation_id])
+        return redirect()->route('companies.index', ['organization_id' => $company->organization_id])
             ->with('success', 'Company updated successfully.');
     }
 
     public function destroy(Company $company)
     {
-        $org_id = $company->organisation_id;
+        $org_id = $company->organization_id;
         $company->delete();
-        return redirect()->route('companies.index', ['organisation_id' => $org_id])
+        return redirect()->route('companies.index', ['organization_id' => $org_id])
             ->with('success', 'Company deleted successfully.');
     }
 }

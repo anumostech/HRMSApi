@@ -33,7 +33,7 @@
                 </div>
                 @endif
 
-                <form action="{{ route('attendance.store') }}" method="POST" enctype="multipart/form-data">
+                <form id="attendanceUploadForm" enctype="multipart/form-data">
                     @csrf
                     <div class="form-group mb-3">
                         <label for="company_id" class="form-label">Select Company</label>
@@ -61,4 +61,66 @@
         </div>
     </div>
 </div>
+<!-- Progress -->
+<div class="mt-4 d-none" id="progressSection">
+    <div class="progress">
+        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-green-1" style="width:0%" style="color:green;background:green;"></div>
+    </div>
+    <div class="text-center mt-2">
+        <span id="progressText">0%</span>
+    </div>
+</div>
+@endsection
+@section('scripts')
+<script>
+    document.getElementById('attendanceUploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        let formData = new FormData(this);
+
+        axios.post("{{ route('attendance.store') }}", formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            })
+            .then(function(response) {
+
+                document.getElementById('progressSection').classList.remove('d-none');
+
+                checkProgress(response.data.upload_id);
+            })
+            .catch(function(error) {
+                console.error(error);
+                alert('Upload failed');
+            });
+    });
+
+
+    const progressUrl = "{{ route('attendance.progress', ':id') }}";
+
+    function checkProgress(id) {
+
+        let interval = setInterval(function() {
+
+            axios.get(progressUrl.replace(':id', id))
+                .then(function(response) {
+
+                    let res = response.data;
+
+                    document.getElementById('progressBar').style.width = res.progress + '%';
+                    document.getElementById('progressText').innerText = res.progress + '%';
+
+                    if (res.status === 'completed') {
+                        clearInterval(interval);
+                        location.reload();
+                    }
+
+                })
+                .catch(function(error) {
+                    console.error(error);
+                });
+
+        }, 2000);
+    }
+</script>
 @endsection

@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::get('/upload', [AttendanceController::class, 'create'])->name('attendance.upload');
         Route::post('/upload', [AttendanceController::class, 'store'])->name('attendance.store');
+        Route::get('/attendance/progress/{id}', [AttendanceController::class, 'progress'])->name('attendance.progress');
         Route::get('/punch-in-today', [AttendanceController::class, 'indexPunchInToday'])->name('attendance.punchInToday');
         Route::get('/punch-in-yesterday', [AttendanceController::class, 'indexPunchInYesterday'])->name('attendance.punchInYesterday');
         Route::get('/punch-out-today', [AttendanceController::class, 'indexPunchOutToday'])->name('attendance.punchOutToday');

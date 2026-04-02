@@ -50,10 +50,10 @@
                             @forelse($employees as $key => $employee)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $employee->name }}</td>
-                                <td>{{ $employee->designation }}</td>
+                                <td>{{ $employee->first_name.' '.$employee?->last_name }}</td>
+                                <td>{{ $employee->designation?->name }}</td>
                                 <td>{{ $employee->department->name ?? '' }}</td>
-                                <td>{{ $employee->company->name ?? '' }}</td>
+                                <td>{{ $employee->company->company_name ?? '' }}</td>
                                 <td>
                                     <span class="badge bg-info-light text-info rounded-pill px-3">{{ $employee->total_leaves_allocated ?? 0 }} Days</span>
                                 </td>

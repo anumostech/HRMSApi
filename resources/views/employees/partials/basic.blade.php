@@ -2,27 +2,17 @@
 
     <!-- Full Name -->
     <div class="col-md-3 mb-3">
-        <label class="form-label">Full Name <span class="text-danger">*</span></label>
-        <input type="text" class="form-control @error('name') is-invalid @enderror" name="name"
-            value="{{ old('name', $employee->name ?? '') }}" placeholder="Enter full name" required>
+        <label class="form-label">First Name <span class="text-danger">*</span></label>
+        <input type="text" class="form-control @error('first_name') is-invalid @enderror" name="first_name"
+            value="{{ old('first_name', $employee->first_name ?? '') }}" placeholder="Enter first name" required>
         @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
 
-    <!-- Organization -->
     <div class="col-md-3 mb-3">
-        <label class="form-label">Organization <span class="text-danger">*</span></label>
-        <div class="select-wrapper">
-            <select class="form-control @error('organization_id') is-invalid @enderror" name="organization_id"
-                id="organizationSelect" required>
-                <option value="">Select Organization</option>
-                @foreach($organizations as $organization)
-                    <option value="{{ $organization->id }}" {{ old('organization_id', $employee->organization_id) == $organization->id ? 'selected' : '' }}>
-                        {{ $organization->org_name }}
-                    </option>
-                @endforeach
-            </select>
-            @error('organization_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-        </div>
+        <label class="form-label">Last Name </label>
+        <input type="text" class="form-control @error('last_name') is-invalid @enderror" name="last_name"
+            value="{{ old('last_name', $employee->last_name ?? '') }}" placeholder="Enter last name">
+        @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
 
     <!-- Company -->
@@ -31,6 +21,9 @@
         <div class="select-wrapper">
             <select class="form-control @error('company_id') is-invalid @enderror" name="company_id" id="companySelect" required>
                 <option value="">Select Company</option>
+                @foreach($companies as $company)
+                    <option value="{{ $company->id }}" {{ old('company_id', $employee->company_id) == $company->id ? 'selected' : '' }}>{{ $company->company_name }}</option>
+                @endforeach
                 <option value="__new__" id="addCompanyOption" class="text-center"
                     style="background:#0D9C1E;color:#fff;">+ Add Company</option>
             </select>
@@ -58,8 +51,16 @@
     <!-- Designation -->
     <div class="col-md-3 mb-3">
         <label class="form-label">Designation <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" name="designation"
-            value="{{ old('designation', $employee->designation ?? '') }}" placeholder="Enter designation" required>
+        <div class="select-wrapper">
+            <select class="form-control @error('designation_id') is-invalid @enderror" name="designation_id"
+                id="designationSelect" required>
+                <option value="">Select Designation</option>
+                @foreach($designations as $designation)
+                    <option value="{{ $designation->id }}" {{ old('designation_id', $employee->designation_id) == $designation->id ? 'selected' : '' }}>{{ $designation->name }}</option>
+                @endforeach
+            </select>
+            @error('designation_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
     </div>
 
     <!-- Date of Joining -->

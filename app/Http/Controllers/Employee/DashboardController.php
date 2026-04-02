@@ -14,7 +14,7 @@ class DashboardController extends Controller
     {
         /** @var \App\Models\Employee $employee */
         $employee = Auth::guard('employee')->user();
-        $employee->load('department', 'company');
+        $employee->load('department', 'company', 'designation');
 
         // Get own attendance logs for last 30 days
         $from = Carbon::now()->subDays(30)->startOfDay();
