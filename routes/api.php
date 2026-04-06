@@ -1,9 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Auth\AdminAuthController;
-use App\Http\Controllers\Api\Auth\EmployeeAuthController;
+use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Admin\EmployeeApiController;
 use App\Http\Controllers\Api\Admin\OrganizationApiController;
 use App\Http\Controllers\Api\Admin\CompanyApiController;
@@ -14,31 +12,24 @@ use App\Http\Controllers\Api\Employee\EmployeePortalApiController;
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
 */
 
-// Admin Auth Routes
-Route::group(['prefix' => 'admin/auth'], function () {
-    Route::post('login', [AdminAuthController::class, 'login']);
-    Route::post('logout', [AdminAuthController::class, 'logout']);
-    Route::post('refresh', [AdminAuthController::class, 'refresh']);
-    Route::get('me', [AdminAuthController::class, 'me']);
-});
-
-// Employee Auth Routes
-Route::group(['prefix' => 'employee/auth'], function () {
-    Route::post('login', [EmployeeAuthController::class, 'login']);
-    Route::post('logout', [EmployeeAuthController::class, 'logout']);
-    Route::post('refresh', [EmployeeAuthController::class, 'refresh']);
-    Route::get('me', [EmployeeAuthController::class, 'me']);
+// Unified Auth Routes
+Route::group(['prefix' => 'auth'], function () {
+    Route::post('login', [LoginController::class, 'login']);
+    Route::post('logout', [LoginController::class, 'logout'])->middleware('auth:api');
+    Route::get('me', [LoginController::class, 'me'])->middleware('auth:api');
 });
 
 // Admin Protected Routes
 Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
+    // Dashboard
+    Route::get('dashboard', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'index']);
+    Route::get('dashboard/summary', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'getSummaryStats']);
+    Route::get('dashboard/charts', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'getDetailedChartData']);
+    Route::get('notifications', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'getNotifications']);
+    Route::post('notifications/{id}/mark-as-read', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'markAsRead']);
+
     // Employees
     Route::apiResource('employees', EmployeeApiController::class);
     Route::post('employees/{employee}/update-status', [EmployeeApiController::class, 'updateStatus']);
@@ -47,7 +38,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::apiResource('organizations', OrganizationApiController::class);
     Route::apiResource('companies', CompanyApiController::class);
 
-    // HR Modules (Small)
+    // HR Modules
     Route::get('designations', [HRApiController::class, 'indexDesignations']);
     Route::post('designations', [HRApiController::class, 'storeDesignation']);
     Route::put('designations/{designation}', [HRApiController::class, 'updateDesignation']);
@@ -58,8 +49,8 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::delete('departments/{department}', [HRApiController::class, 'destroyDepartment']);
 });
 
-// Employee Protected Routes
-Route::group(['middleware' => 'auth:employee_api', 'prefix' => 'employee'], function () {
+// Employee Protected Routes (Now also using auth:api)
+Route::group(['middleware' => 'auth:api', 'prefix' => 'employee'], function () {
     Route::get('dashboard', [EmployeePortalApiController::class, 'dashboard']);
     Route::post('punch-in', [EmployeePortalApiController::class, 'punchIn']);
     Route::post('punch-out', [EmployeePortalApiController::class, 'punchOut']);

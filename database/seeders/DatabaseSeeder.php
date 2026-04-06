@@ -22,7 +22,10 @@ class DatabaseSeeder extends Seeder
         //     'email' => 'test@example.com',
         // ]);
         $this->call([
+            RoleSeeder::class,
             LeaveTypeSeeder::class,
+            AdminSeeder::class,
+            EmployeeSeeder::class
         ]);
     }
 }

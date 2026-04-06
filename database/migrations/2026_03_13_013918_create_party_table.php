@@ -11,19 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('party', function (Blueprint $table) {
+        Schema::create('parties', function (Blueprint $table) {
+            $table->id();
             $table->string('name');
-            $table->string('company_name')->nullable();
+            $table->foreignId('company_id')->nullable();
             $table->string('contact_person')->nullable();
-
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
-
             $table->text('address')->nullable();
             $table->text('notes')->nullable();
-            $table->id();
-            $table->softDeletes();
+            $table->integer('created_by')->nullable();
+            $table->integer('deleted_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
