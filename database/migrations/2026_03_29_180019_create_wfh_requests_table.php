@@ -18,7 +18,10 @@ return new class extends Migration
             $table->text('reason');
             $table->text('notes')->nullable();
             $table->enum('status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
+            $table->integer('created_by')->nullable();
+            $table->integer('deleted_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

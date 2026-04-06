@@ -14,14 +14,21 @@ return new class extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('type')->default('others');
+            $table->enum('type',[
+                'organization',
+                'agreements',
+                'hr',
+                'others'
+            ])->default('others');
             $table->text('description')->nullable();
             $table->string('file_path');
             $table->string('folder');
             $table->foreignId('share_with')->nullable();
             $table->date('expiry_date')->nullable();
-            $table->softDeletes();
             $table->timestamps();
+            $table->integer('created_by')->nullable();
+            $table->integer('deleted_by')->nullable();
+            $table->softDeletes();
         });
     }
 

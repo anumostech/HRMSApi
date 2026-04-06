@@ -19,7 +19,10 @@ return new class extends Migration
             $table->integer('processed_records')->default(0);
             $table->integer('progress')->default(0);
             $table->enum('status', ['pending', 'processing', 'completed', 'failed'])->default('pending');
+            $table->integer('created_by')->nullable();
+            $table->integer('deleted_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

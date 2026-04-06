@@ -123,7 +123,10 @@ class StoreEmployeeRequest extends FormRequest
             'personal_email' => 'nullable|email|max:255',
             'status' => 'nullable|in:active,inactive',
             'total_leaves_allocated' => 'nullable|integer|min:0',
+            'username' => 'nullable|string|max:255|unique:users,username',
             'password' => 'nullable|string|max:255',
+            'type' => 'required|in:admin,staff,field_employee,driver,remote_employee',
+            'role' => 'nullable|string|max:255',
         ];
     }
 

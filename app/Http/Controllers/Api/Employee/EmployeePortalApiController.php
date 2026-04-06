@@ -19,8 +19,9 @@ class EmployeePortalApiController extends ApiController
      */
     public function dashboard(): JsonResponse
     {
-        $employee = auth('employee_api')->user();
-        if (!$employee) return $this->error('Employee not found', 404);
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
 
         $today = Carbon::today()->toDateString();
         $attendance = AttendanceLog::where('userid', $employee->id)
@@ -44,7 +45,10 @@ class EmployeePortalApiController extends ApiController
      */
     public function punchIn(): JsonResponse
     {
-        $employee = auth('employee_api')->user();
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
+
         $today = Carbon::today()->toDateString();
 
         $alreadyPunched = AttendanceLog::where('userid', $employee->id)
@@ -56,7 +60,7 @@ class EmployeePortalApiController extends ApiController
         }
 
         $log = AttendanceLog::create([
-            'company_id' => $employee->company_id ?? 1,
+            'company_id' => $user->company_id ?? 1,
             'userid' => $employee->id,
             'log_date' => $today,
             'punch_in' => Carbon::now(),
@@ -78,7 +82,10 @@ class EmployeePortalApiController extends ApiController
             'remarks' => 'nullable|string'
         ]);
 
-        $employee = auth('employee_api')->user();
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
+
         $today = Carbon::today()->toDateString();
 
         $log = AttendanceLog::where('userid', $employee->id)
@@ -109,7 +116,10 @@ class EmployeePortalApiController extends ApiController
      */
     public function leaves(): JsonResponse
     {
-        $employee = auth('employee_api')->user();
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
+
         $leaves = LeaveRequest::where('employee_id', $employee->id)->latest()->get();
         return $this->success($leaves);
     }
@@ -123,7 +133,10 @@ class EmployeePortalApiController extends ApiController
             'reason' => 'required|string'
         ]);
 
-        $employee = auth('employee_api')->user();
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
+
         $leave = LeaveRequest::create(array_merge($request->all(), [
             'employee_id' => $employee->id,
             'status' => 'pending'
@@ -137,7 +150,10 @@ class EmployeePortalApiController extends ApiController
      */
     public function taskReports(): JsonResponse
     {
-        $employee = auth('employee_api')->user();
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
+
         $reports = TaskReport::where('employee_id', $employee->id)->latest()->get();
         return $this->success($reports);
     }
@@ -150,7 +166,10 @@ class EmployeePortalApiController extends ApiController
             'remarks' => 'nullable|string'
         ]);
 
-        $employee = auth('employee_api')->user();
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
+
         $report = TaskReport::create(array_merge($request->all(), [
             'employee_id' => $employee->id,
             'date' => Carbon::now()
@@ -164,7 +183,10 @@ class EmployeePortalApiController extends ApiController
      */
     public function wfhRequests(): JsonResponse
     {
-        $employee = auth('employee_api')->user();
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
+
         $requests = WfhRequest::where('employee_id', $employee->id)->latest()->get();
         return $this->success($requests);
     }
@@ -177,7 +199,10 @@ class EmployeePortalApiController extends ApiController
             'notes' => 'nullable|string'
         ]);
 
-        $employee = auth('employee_api')->user();
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee) return $this->error('Employee profile not found', 404);
+
         $wfh = WfhRequest::create(array_merge($request->all(), [
             'employee_id' => $employee->id,
             'status' => 'pending'
