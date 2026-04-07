@@ -20,24 +20,76 @@ class EmployeePortalApiController extends ApiController
     public function dashboard(): JsonResponse
     {
         $user = auth('api')->user();
-        $employee = $user ? $user->employee : null;
+        if (!$user) return $this->error('Unauthorized', 401);
+        
+        $employee = $user->employee;
         if (!$employee) return $this->error('Employee profile not found', 404);
 
+        $employee->load('department', 'company', 'designation');
+
         $today = Carbon::today()->toDateString();
-        $attendance = AttendanceLog::where('userid', $employee->id)
+        
+        // Attendance stats for today
+        $attendance = AttendanceLog::where('userid', $employee->employee_id)
             ->whereDate('log_date', $today)
+            ->select('punch_in', 'punch_out')
             ->first();
 
-        $stats = [
-            'punched_in' => (bool)$attendance,
-            'punched_out' => $attendance && $attendance->punch_out,
-            'punch_in_time' => $attendance ? $attendance->punch_in : null,
-            'punch_out_time' => $attendance ? $attendance->punch_out : null,
-            'recent_leaves' => LeaveRequest::where('employee_id', $employee->id)->latest()->take(5)->get(),
-            'pending_wfh' => WfhRequest::where('employee_id', $employee->id)->where('status', 'pending')->count(),
-        ];
+        // 30-day attendance history
+        $from = Carbon::now()->subDays(30)->startOfDay();
+        $to = Carbon::now()->endOfDay();
+        $attendanceHistory = AttendanceLog::where('userid', $employee->employee_id)
+            ->whereBetween('log_date', [$from, $to])
+            ->select('log_date', 'punch_in', 'punch_out')
+            ->orderByDesc('log_date')
+            ->get();
 
-        return $this->success($stats);
+        // Leave stats
+        $totalLeavesTaken = LeaveRequest::where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->sum('duration_days');
+
+        $leaveBalance = $employee->total_leaves_allocated - $totalLeavesTaken;
+
+        // Punch Access Logic
+        $canPunch = false;
+        
+        // 1. Check default designation punch access
+        if ($employee->designation && $employee->designation->default_punch_access) {
+            $canPunch = true;
+        }
+
+        // 2. Specific designation checks
+        if (!$canPunch && ($employee->designation && in_array($employee->designation->name, ['Delivery Man', 'Salesperson']))) {
+            $canPunch = true;
+        }
+
+        // 3. Check for approved WFH request today
+        if (!$canPunch) {
+            $canPunch = WfhRequest::where('employee_id', $employee->id)
+                ->whereDate('date', $today)
+                ->where('status', 'Approved')
+                ->exists();
+        }
+
+        return $this->success([
+            'employee' => $employee,
+            'today_attendance' => [
+                'punched_in' => (bool)$attendance,
+                'punched_out' => $attendance && $attendance->punch_out,
+                'punch_in_time' => $attendance ? $attendance->punch_in : null,
+                'punch_out_time' => $attendance ? $attendance->punch_out : null,
+            ],
+            'leave_stats' => [
+                'total_taken' => (float)$totalLeavesTaken,
+                'balance' => (float)$leaveBalance,
+                'allocated' => (float)$employee->total_leaves_allocated,
+            ],
+            'attendance_history' => $attendanceHistory,
+            'can_punch' => $canPunch,
+            'pending_wfh_count' => WfhRequest::where('employee_id', $employee->id)->where('status', 'pending')->count(),
+            'recent_leaves' => LeaveRequest::where('employee_id', $employee->id)->latest()->take(5)->get(),
+        ]);
     }
 
     /**

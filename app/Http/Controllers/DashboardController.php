@@ -25,7 +25,7 @@ class DashboardController extends Controller
         $folders = Document::select('folder')
             ->distinct()
             ->pluck('folder');
-        $share_with = User::select('id', 'name')->get();
+        $share_with = User::with('employee')->select('id', 'username')->get();
         $parties = Party::select('id', 'name')->get();
         $employees = Employee::with(['company', 'department'])
             ->get();
