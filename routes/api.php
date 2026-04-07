@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\EmployeeApiController;
 use App\Http\Controllers\Api\Admin\OrganizationApiController;
 use App\Http\Controllers\Api\Admin\CompanyApiController;
 use App\Http\Controllers\Api\Admin\HRApiController;
+use App\Http\Controllers\Api\Admin\DashboardApiController;
 use App\Http\Controllers\Api\Employee\EmployeePortalApiController;
 
 /*
@@ -24,11 +25,11 @@ Route::group(['prefix' => 'auth'], function () {
 // Admin Protected Routes
 Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     // Dashboard
-    Route::get('dashboard', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'index']);
-    Route::get('dashboard/summary', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'getSummaryStats']);
-    Route::get('dashboard/charts', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'getDetailedChartData']);
-    Route::get('notifications', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'getNotifications']);
-    Route::post('notifications/{id}/mark-as-read', [\App\Http\Controllers\Api\Admin\DashboardApiController::class, 'markAsRead']);
+    Route::get('dashboard', [DashboardApiController::class, 'index']);
+    Route::get('dashboard/summary', [DashboardApiController::class, 'getSummaryStats']);
+    Route::get('dashboard/charts', [DashboardApiController::class, 'getDetailedChartData']);
+    Route::get('notifications', [DashboardApiController::class, 'getNotifications']);
+    Route::post('notifications/{id}/mark-as-read', [DashboardApiController::class, 'markAsRead']);
 
     // Employees
     Route::apiResource('employees', EmployeeApiController::class);
