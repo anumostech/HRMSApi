@@ -24,14 +24,14 @@ class DashboardApiController extends ApiController
         $agreements = Document::with('shareWith')->where('type', 'agreement')->latest()->take(10)->get();
         $others = Document::with('shareWith')->where('type', 'others')->latest()->take(10)->get();
         $hr = Document::with('shareWith')->where('type', 'hr')->latest()->take(10)->get();
-        
+
         $folders = Document::select('folder')
             ->distinct()
             ->pluck('folder');
-            
-        $share_with = User::select('id', 'name')->get();
+
+        $share_with = User::with(['employee', 'company', 'department'])->select('id', 'username')->get();
         $parties = Party::select('id', 'name')->get();
-        $employees = Employee::with(['company', 'department'])->latest()->take(10)->get();
+        $employees = Employee::latest()->take(10)->get();
 
         $today = Carbon::today();
         $yesterday = Carbon::yesterday();
@@ -39,7 +39,6 @@ class DashboardApiController extends ApiController
         $todayStats = $this->getAttendanceStatsByDate($today);
         $yesterdayStats = $this->getAttendanceStatsByDate($yesterday);
 
-        // Punch chart data
         $punchChartData = [
             'today' => [
                 'punched_in' => $todayStats['punched_in'],
@@ -99,8 +98,12 @@ class DashboardApiController extends ApiController
     {
         $today = Carbon::today()->toDateString();
 
-        $activeEmployees = Employee::count();
-        $inactiveEmployees = Employee::onlyInactive()->count();
+        $activeEmployees = Employee::whereHas('user', function ($q) {
+            $q->where('status', 'active');
+        })->count();
+        $inactiveEmployees = Employee::whereHas('user', function ($q) {
+            $q->where('status', 'inactive');
+        })->count();
         $totalEmployees = $activeEmployees + $inactiveEmployees;
 
         $todayLogs = AttendanceLog::whereDate('log_date', $today)
@@ -165,7 +168,8 @@ class DashboardApiController extends ApiController
             ->get();
 
         // Department-wise Distribution
-        $deptDistribution = Employee::join('departments', 'employees.department_id', '=', 'departments.id')
+        $deptDistribution = Employee::join('users', 'employees.user_id', '=', 'users.id')
+            ->join('departments', 'users.department_id', '=', 'departments.id')
             ->select('departments.name as department', DB::raw('count(*) as count'))
             ->groupBy('departments.name')
             ->get();
@@ -195,7 +199,7 @@ class DashboardApiController extends ApiController
         if (!$user) {
             return $this->error('User not found', 401);
         }
-        
+
         $notifications = $user->unreadNotifications;
         return $this->success($notifications);
     }
