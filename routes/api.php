@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\EmployeeApiController;
 use App\Http\Controllers\Api\Admin\OrganizationApiController;
 use App\Http\Controllers\Api\Admin\CompanyApiController;
 use App\Http\Controllers\Api\Admin\HRApiController;
+use App\Http\Controllers\Api\Admin\DashboardApiController;
 use App\Http\Controllers\Api\Employee\EmployeePortalApiController;
 use \App\Http\Controllers\Api\Admin\DashboardApiController;
 
