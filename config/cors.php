@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['https://mostech.ae/time-tracker/staff',],
 
     'allowed_origins_patterns' => [],
 
