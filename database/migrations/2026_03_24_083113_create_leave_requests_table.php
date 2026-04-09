@@ -18,6 +18,9 @@ return new class extends Migration
             $table->date('start_date');
             $table->date('end_date');
             $table->text('reason');
+            $table->integer('duration_days')->nullable();
+            $table->boolean('claim_salary')->default(0)->nullable();
+            $table->string('document')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->foreignId('approved_by')->nullable()->index();
             $table->text('admin_remark')->nullable();

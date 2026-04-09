@@ -14,12 +14,12 @@ class CompanyApiController extends ApiController
     {
         $organization_id = $request->get('organization_id');
         $companies = Company::with('organization')
-            ->when($organization_id, function($query) use ($organization_id) {
+            ->when($organization_id, function ($query) use ($organization_id) {
                 return $query->where('organization_id', $organization_id);
             })
             ->latest()
             ->get();
-        
+
         return $this->success($companies);
     }
 
@@ -35,7 +35,7 @@ class CompanyApiController extends ApiController
         ]);
 
         $data = $request->except('logo');
-        
+
         if ($request->hasFile('logo')) {
             $data['logo'] = $request->file('logo')->store('logos/companies', 'public');
         }

@@ -10,6 +10,9 @@ use App\Http\Requests\UpdateEmployeeRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use App\Mail\UserRegistrationMail;
 use Illuminate\Http\JsonResponse;
 
 class EmployeeApiController extends ApiController
@@ -19,7 +22,10 @@ class EmployeeApiController extends ApiController
         $status = $request->get('status', 'active');
         $perPage = $request->get('per_page', 15);
 
-        $query = Employee::with(['user.company', 'user.department', 'user.designation']);
+        $query = Employee::with(['user.company', 'user.department', 'user.designation'])
+            ->whereHas('user', function ($q) {
+                $q->whereNotIn('type', ['admin']);
+            });
 
         if ($status === 'inactive') {
             $query = $query->onlyInactive();
@@ -37,15 +43,16 @@ class EmployeeApiController extends ApiController
         $data = $this->handleSpecialDays($request, $data);
 
         // 1. Create User
+        $randomPassword = Str::random(10);
         $user = User::create([
-            'username' => $data['username'] ?? $data['company_email'] ?? $data['first_name'],
-            'email' => $data['company_email'] ?? $data['personal_email'],
-            'password' => Hash::make($request->get('password', 'Thesay@ae')),
+            'username' => $data['company_email'],
+            'email' => $data['company_email'],
+            'password' => Hash::make($randomPassword),
             'organization_id' => $data['organization_id'] ?? 1,
             'company_id' => $data['company_id'],
             'department_id' => $data['department_id'] ?? null,
             'designation_id' => $data['designation_id'] ?? null,
-            'type' => $data['type'] ?? 'staff',
+            'type' => $data['type'] ?? 'employee',
             'status' => $data['status'] ?? 'active',
         ]);
 
@@ -55,11 +62,22 @@ class EmployeeApiController extends ApiController
 
         // 2. Create Employee linked to User
         $data['user_id'] = $user->id;
-        
+
         // Remove fields that are now on User table
-        unset($data['organization_id'], $data['company_id'], $data['department_id'], $data['designation_id'], $data['password']);
+        unset($data['organization_id'], $data['company_id'], $data['department_id'], $data['designation_id'], $data['password'], $data['status'], $data['type']);
 
         $employee = Employee::create($data);
+
+        // Send Email to both personal and company emails
+        $recipients = array_filter([$employee->company_email, $employee->personal_email]);
+        if (!empty($recipients)) {
+            try {
+                Mail::to($recipients)->send(new UserRegistrationMail($user, $randomPassword, $employee));
+            } catch (\Exception $e) {
+                // Log error or handle it, but don't fail the registration
+                \Log::error('Failed to send registration email: ' . $e->getMessage());
+            }
+        }
 
         // Load relations for response
         $employee->load(['user.company', 'user.department', 'user.designation']);
@@ -124,17 +142,27 @@ class EmployeeApiController extends ApiController
             'status' => 'required|in:active,inactive'
         ]);
 
-        $employee->update(['status' => $request->status]);
+        // Update status in user table
+        $employee->user->update([
+            'status' => $request->status
+        ]);
 
-        return $this->success($employee, 'Status updated successfully');
+        return $this->success($employee->load('user'), 'Status updated successfully');
     }
 
     private function handleDocuments(array $data): array
     {
         $documentFields = [
-            'passport_1st_page', 'passport_2nd_page', 'passport_outer_page',
-            'passport_id_page', 'visa_page', 'labor_card', 'eid_1st_page',
-            'eid_2nd_page', 'educational_1st_page', 'educational_2nd_page',
+            'passport_1st_page',
+            'passport_2nd_page',
+            'passport_outer_page',
+            'passport_id_page',
+            'visa_page',
+            'labor_card',
+            'eid_1st_page',
+            'eid_2nd_page',
+            'educational_1st_page',
+            'educational_2nd_page',
             'home_country_id_proof'
         ];
 

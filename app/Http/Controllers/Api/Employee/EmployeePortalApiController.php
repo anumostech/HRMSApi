@@ -20,15 +20,17 @@ class EmployeePortalApiController extends ApiController
     public function dashboard(): JsonResponse
     {
         $user = auth('api')->user();
-        if (!$user) return $this->error('Unauthorized', 401);
-        
-        $employee = $user->employee;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$user)
+            return $this->error('Unauthorized', 401);
 
-        $employee->load('department', 'company', 'designation');
+        $employee = $user->employee;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
+
+        $user->load('department', 'company', 'designation');
 
         $today = Carbon::today()->toDateString();
-        
+
         // Attendance stats for today
         $attendance = AttendanceLog::where('userid', $employee->employee_id)
             ->whereDate('log_date', $today)
@@ -53,7 +55,7 @@ class EmployeePortalApiController extends ApiController
 
         // Punch Access Logic
         $canPunch = false;
-        
+
         // 1. Check default designation punch access
         if ($employee->designation && $employee->designation->default_punch_access) {
             $canPunch = true;
@@ -75,15 +77,15 @@ class EmployeePortalApiController extends ApiController
         return $this->success([
             'employee' => $employee,
             'today_attendance' => [
-                'punched_in' => (bool)$attendance,
+                'punched_in' => (bool) $attendance,
                 'punched_out' => $attendance && $attendance->punch_out,
                 'punch_in_time' => $attendance ? $attendance->punch_in : null,
                 'punch_out_time' => $attendance ? $attendance->punch_out : null,
             ],
             'leave_stats' => [
-                'total_taken' => (float)$totalLeavesTaken,
-                'balance' => (float)$leaveBalance,
-                'allocated' => (float)$employee->total_leaves_allocated,
+                'total_taken' => (float) $totalLeavesTaken,
+                'balance' => (float) $leaveBalance,
+                'allocated' => (float) $employee->total_leaves_allocated,
             ],
             'attendance_history' => $attendanceHistory,
             'can_punch' => $canPunch,
@@ -99,7 +101,8 @@ class EmployeePortalApiController extends ApiController
     {
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
         $today = Carbon::today()->toDateString();
 
@@ -136,7 +139,8 @@ class EmployeePortalApiController extends ApiController
 
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
         $today = Carbon::today()->toDateString();
 
@@ -144,8 +148,10 @@ class EmployeePortalApiController extends ApiController
             ->whereDate('log_date', $today)
             ->first();
 
-        if (!$log) return $this->error('You have not punched in yet.', 400);
-        if ($log->punch_out) return $this->error('Already punched out today.', 400);
+        if (!$log)
+            return $this->error('You have not punched in yet.', 400);
+        if ($log->punch_out)
+            return $this->error('Already punched out today.', 400);
 
         TaskReport::create([
             'employee_id' => $employee->id,
@@ -170,10 +176,34 @@ class EmployeePortalApiController extends ApiController
     {
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
-        $leaves = LeaveRequest::where('employee_id', $employee->id)->latest()->get();
+        $leaves = LeaveRequest::with('leaveType')->where('employee_id', $employee->id)->latest()->get();
         return $this->success($leaves);
+    }
+
+    public function leaveTypesAndBalance(): JsonResponse
+    {
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
+
+        $leaveTypes = \App\Models\LeaveType::where('status', true)->get();
+
+        $leavesTaken = LeaveRequest::where('employee_id', $employee->id)
+            ->whereIn('status', ['approved', 'pending'])
+            ->sum('duration_days');
+
+        $remainingBalance = (float) $employee->total_leaves_allocated - (float) $leavesTaken;
+
+        return $this->success([
+            'leave_types' => $leaveTypes,
+            'total_allocated' => (float) $employee->total_leaves_allocated,
+            'leaves_taken' => (float) $leavesTaken,
+            'remaining_balance' => (float) $remainingBalance
+        ]);
     }
 
     public function storeLeave(Request $request): JsonResponse
@@ -189,12 +219,48 @@ class EmployeePortalApiController extends ApiController
 
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
-        $leave = LeaveRequest::create(array_merge($request->all(), [
+        $leaveType = \App\Models\LeaveType::find($request->leave_type_id);
+
+        // Check for sick leave document
+        if (str_contains(strtolower($leaveType->name), 'sick') && !$request->hasFile('document')) {
+            return $this->error('Medical certificate is required for sick leave', 422);
+        }
+
+        // Duration calculation
+        $start = Carbon::parse($request->start_date);
+        $end = Carbon::parse($request->end_date);
+        $durationDays = $start->diffInDays($end) + 1;
+
+        // Balance check
+        $leavesTaken = LeaveRequest::where('employee_id', $employee->id)
+            ->whereIn('status', ['approved', 'pending'])
+            ->sum('duration_days');
+
+        $remainingBalance = $employee->total_leaves_allocated - $leavesTaken;
+
+        if ($durationDays > $remainingBalance) {
+            return $this->error("Insufficient leave balance. You have only $remainingBalance days remaining.", 422);
+        }
+
+        $documentPath = null;
+        if ($request->hasFile('document')) {
+            $documentPath = $request->file('document')->store('leaves/documents', 'public');
+        }
+
+        $leave = LeaveRequest::create([
             'employee_id' => $employee->id,
-            'status' => 'pending'
-        ]));
+            'leave_type_id' => $request->leave_type_id,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'duration_days' => $durationDays,
+            'claim_salary' => $request->claim_salary ?? false,
+            'document' => $documentPath,
+            'reason' => $request->reason,
+            'status' => 'pending',
+        ]);
 
         return $this->success($leave, 'Leave request submitted successfully', 201);
     }
@@ -206,7 +272,8 @@ class EmployeePortalApiController extends ApiController
     {
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
         $reports = TaskReport::where('employee_id', $employee->id)->latest()->get();
         return $this->success($reports);
@@ -222,7 +289,8 @@ class EmployeePortalApiController extends ApiController
 
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
         $report = TaskReport::create(array_merge($request->all(), [
             'employee_id' => $employee->id,
@@ -239,7 +307,8 @@ class EmployeePortalApiController extends ApiController
     {
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
         $requests = WfhRequest::where('employee_id', $employee->id)->latest()->get();
         return $this->success($requests);
@@ -255,12 +324,25 @@ class EmployeePortalApiController extends ApiController
 
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
-        if (!$employee) return $this->error('Employee profile not found', 404);
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
-        $wfh = WfhRequest::create(array_merge($request->all(), [
+        // Check for duplicate request on the same date
+        $exists = WfhRequest::where('employee_id', $employee->id)
+            ->whereDate('date', $request->date)
+            ->exists();
+
+        if ($exists) {
+            return $this->error('You have already submitted a WFH request for this date.', 422);
+        }
+
+        $wfh = WfhRequest::create([
             'employee_id' => $employee->id,
+            'date' => $request->date,
+            'reason' => $request->reason,
+            'notes' => $request->notes,
             'status' => 'pending'
-        ]));
+        ]);
 
         return $this->success($wfh, 'WFH request submitted successfully', 201);
     }

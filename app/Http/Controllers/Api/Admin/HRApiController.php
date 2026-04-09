@@ -30,6 +30,11 @@ class HRApiController extends ApiController
         return $this->success($designation, 'Designation updated successfully');
     }
 
+    public function showDesignation(Designation $designation): JsonResponse
+    {
+        return $this->success($designation);
+    }
+
     public function destroyDesignation(Designation $designation): JsonResponse
     {
         $designation->delete();
@@ -47,6 +52,18 @@ class HRApiController extends ApiController
         $request->validate(['name' => 'required|string|max:255']);
         $department = Department::create(['name' => $request->name]);
         return $this->success($department, 'Department created successfully', 201);
+    }
+
+    public function showDepartment(Department $department): JsonResponse
+    {
+        return $this->success($department);
+    }
+
+    public function updateDepartment(Request $request, Department $department): JsonResponse
+    {
+        $request->validate(['name' => 'required|string|max:255']);
+        $department->update(['name' => $request->name]);
+        return $this->success($department, 'Department updated successfully');
     }
 
     public function destroyDepartment(Department $department): JsonResponse

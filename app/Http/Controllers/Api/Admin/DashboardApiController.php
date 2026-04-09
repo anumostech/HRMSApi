@@ -25,9 +25,9 @@ class DashboardApiController extends ApiController
         $others = Document::with('shareWith')->where('type', 'others')->latest()->take(10)->get();
         $hr = Document::with('shareWith')->where('type', 'hr')->latest()->take(10)->get();
 
-        $folders = Document::select('folder')
+        $folders = Document::with('folder')->select('id','name')
             ->distinct()
-            ->pluck('folder');
+            ->pluck('name');
 
         $share_with = User::with(['employee', 'company', 'department'])->select('id', 'username')->get();
         $parties = Party::select('id', 'name')->get();

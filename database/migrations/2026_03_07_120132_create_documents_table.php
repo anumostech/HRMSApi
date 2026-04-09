@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,7 +13,7 @@ return new class extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->enum('type',[
+            $table->enum('type', [
                 'organization',
                 'agreements',
                 'hr',
@@ -22,7 +21,8 @@ return new class extends Migration
             ])->default('others');
             $table->text('description')->nullable();
             $table->string('file_path');
-            $table->string('folder');
+            $table->foreignId('party_id')->nullable();
+            $table->foreignId('folder_id')->nullable();
             $table->foreignId('share_with')->nullable();
             $table->date('expiry_date')->nullable();
             $table->timestamps();
