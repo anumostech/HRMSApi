@@ -15,7 +15,7 @@ class Document extends Model
         'type',
         'description',
         'file_path',
-        'folder',
+        'folder_id',
         'party_id',
         'share_with',
         'expiry_date'
@@ -38,5 +38,10 @@ class Document extends Model
     public function party()
     {
         return $this->belongsTo(Party::class, 'party_id', 'id');
+    }
+
+    public function folder()
+    {
+        return $this->belongsTo(Folder::class, 'folder_id', 'id');
     }
 }

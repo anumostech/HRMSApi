@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\ApiController;
 use App\Models\Document;
+use App\Models\Folder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
@@ -57,13 +58,15 @@ class DocumentApiController extends ApiController
             'type' => 'required|in:organization,agreement,hr,others',
             'description' => 'nullable|string',
             'file_path' => 'required|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'folder' => 'required|string',
+            'folder_id' => 'required|exists:folders,id',
             'party_id' => 'nullable|exists:parties,id',
             'share_with' => 'nullable|exists:users,id',
             'expiry_date' => 'nullable|date_format:d-m-Y|after:today'
         ]);
 
-        $folder = $request->folder;
+        $folder_id = $request->folder_id;
+        $folder = Folder::find($folder_id);
+        $folder_name = $folder->name;
         $file = $request->file('file_path');
         $tempPath = $file->store('temp', 'public');
 
@@ -72,13 +75,8 @@ class DocumentApiController extends ApiController
             return $this->error('Temporary file not found', 404);
         }
 
-        // Create folder if not exists
-        if (!Storage::disk('public')->exists('documents/' . $folder)) {
-            Storage::disk('public')->makeDirectory('documents/' . $folder);
-        }
-
         $filename = basename($tempPath);
-        $newPath = 'documents/' . $folder . '/' . $filename;
+        $newPath = 'documents/' . $folder_name . '/' . $filename;
 
         // Move file from temp to final destination
         Storage::disk('public')->move($tempPath, $newPath);
@@ -88,7 +86,7 @@ class DocumentApiController extends ApiController
             'type' => $request->type,
             'description' => $request->description,
             'file_path' => $newPath,
-            'folder' => $folder,
+            'folder_id' => $folder_id,
             'party_id' => $request->party_id,
             'share_with' => $request->share_with,
             'expiry_date' => $request->expiry_date
@@ -108,6 +106,9 @@ class DocumentApiController extends ApiController
             'name' => 'required|string|max:255',
             'type' => 'required|in:organization,agreement,hr,others',
             'description' => 'nullable|string',
+            
+            'file_path' => 'required|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'folder_id' => 'required|exists:folders,id',
             'party_id' => 'nullable|exists:parties,id',
             'share_with' => 'nullable|exists:users,id',
             'expiry_date' => 'nullable|date_format:d-m-Y'
@@ -118,6 +119,8 @@ class DocumentApiController extends ApiController
             'type',
             'description',
             'party_id',
+            'file_path',
+            'folder_id',
             'share_with',
             'expiry_date'
         ]));

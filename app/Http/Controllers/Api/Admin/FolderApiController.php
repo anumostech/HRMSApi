@@ -73,7 +73,7 @@ class FolderApiController extends ApiController
         $folder->update([
             'deleted_by' => Auth::id()
         ]);
-        
+
         $folder->delete();
 
         return $this->success(null, 'Folder deleted successfully');

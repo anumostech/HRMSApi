@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Admin\LeaveApiController;
 use App\Http\Controllers\Api\Admin\WfhApiController;
 use App\Http\Controllers\Api\Admin\AttendanceApiController;
 use App\Http\Controllers\Api\Admin\LeaveTypeApiController;
+use App\Http\Controllers\Api\Admin\ReportApiController;
 use App\Http\Controllers\Api\Employee\EmployeePortalApiController;
 use App\Http\Controllers\Api\Employee\ProfileApiController;
 
@@ -93,6 +94,16 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     // Leave Types (Admin side)
     Route::apiResource('leave-types', LeaveTypeApiController::class);
     Route::post('leave-types/{leaveType}/status', [LeaveTypeApiController::class, 'updateStatus']);
+
+    // Reports
+    Route::group(['prefix' => 'reports'], function () {
+        Route::get('attendance', [ReportApiController::class, 'attendanceReport']);
+        Route::get('leaves', [ReportApiController::class, 'leaveReport']);
+        // If you still want the previous staffing/summaries, I can keep them, 
+        // but for the UI table listing:
+        Route::get('employees', [ReportApiController::class, 'employeeReport']);
+        Route::get('export', [ReportApiController::class, 'export']);
+    });
 });
 
 // Employee Protected Routes (Now also using auth:api)

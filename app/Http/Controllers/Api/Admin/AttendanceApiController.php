@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class AttendanceApiController extends ApiController
@@ -46,11 +47,11 @@ class AttendanceApiController extends ApiController
                     ->orWhere('last_name', 'like', "%$employeeName%");
             });
         }
-        
+
         if ($datePreset != 'all') {
             $this->applyDateFilter($query, $datePreset, $request->get('from_date'), $request->get('to_date'));
         }
-        
+
 
         $attendance = $query->groupBy('company_id', 'userid', 'log_date')
             ->orderBy('log_date', 'desc')
@@ -65,6 +66,7 @@ class AttendanceApiController extends ApiController
     /**
      * Upload Attendance File
      */
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
@@ -73,24 +75,48 @@ class AttendanceApiController extends ApiController
         ]);
 
         try {
-            $path = $request->file('file')->store('attendance', 'public');
+            $file = $request->file('file');
 
+            // Ensure directory exists
+            if (!Storage::disk('private')->exists('attendance')) {
+                Storage::disk('private')->makeDirectory('attendance');
+            }
+
+            // Store file
+            $path = $file->store('attendance', 'private');
+
+            // Double check file actually exists
+            if (!Storage::disk('private')->exists($path)) {
+                Log::error('File not stored properly: ' . $path);
+                return response()->json([
+                    'message' => 'File upload failed'
+                ], 500);
+            }
+
+            // Save in DB
             $upload = AttendanceUpload::create([
-                'file_path' => $path,
+                'file_path' => $path, // e.g. attendance/xyz.txt
                 'company_id' => $request->company_id,
                 'status' => 'pending',
                 'progress' => 0
             ]);
 
+            // Dispatch job
             ProcessAttendanceJob::dispatch($upload->id, $request->company_id);
 
-            return $this->success([
+            return response()->json([
                 'upload_id' => $upload->id,
-                'status' => 'pending'
-            ], 'Attendance file uploaded and processing started.');
+                'status' => 'pending',
+                'file_path' => $path
+            ]);
+
         } catch (\Exception $e) {
-            Log::error('Attendance Upload Error: ' . $e->getMessage());
-            return $this->error('Upload failed: ' . $e->getMessage(), 500);
+            Log::error('Upload Error: ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Upload failed',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -171,7 +197,10 @@ class AttendanceApiController extends ApiController
 
         $query = Employee::with(['user.company', 'user.department', 'user.designation'])
             ->whereNotIn('employee_id', $presentUserIds)
-            ->where('status', 'active');
+            ->whereHas('user', function ($q) {
+                $q->where('status', 'active');
+                $q->where('type', '!=', 'admin');
+            });
 
         if ($companyId) {
             $query->whereHas('user', function ($q) use ($companyId) {
