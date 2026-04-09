@@ -68,8 +68,8 @@ class StoreEmployeeRequest extends FormRequest
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'organization_id' => 'nullable|exists:organizations,id',
-            'employee_id' => 'nullable|unique:employees,employee_id',
+            'organization_id' => 'required|exists:organizations,id',
+            'employee_id' => 'required|unique:employees,employee_id',
             'designation_id' => 'nullable|string|max:255',
             'department_id' => 'nullable|string|max:255',
             'company_id' => 'required|exists:companies,id',
@@ -119,13 +119,13 @@ class StoreEmployeeRequest extends FormRequest
             'personal_number' => 'nullable|string|max:255',
             'other_number' => 'nullable|string|max:255',
             'home_country_number' => 'nullable|string|max:255',
-            'company_email' => 'nullable|email|max:255',
-            'personal_email' => 'nullable|email|max:255',
+            'company_email' => 'required|email|max:255',
+            'personal_email' => 'required|email|max:255',
             'status' => 'nullable|in:active,inactive',
-            'total_leaves_allocated' => 'nullable|integer|min:0',
+            'total_leaves_allocated' => 'required|integer|min:0',
             'username' => 'nullable|string|max:255|unique:users,username',
             'password' => 'nullable|string|max:255',
-            'type' => 'required|in:admin,staff,field_employee,driver,remote_employee',
+            'type' => 'required|in:admin,manager,employee,field_employee,driver,remote_employee',
             'role' => 'nullable|string|max:255',
         ];
     }

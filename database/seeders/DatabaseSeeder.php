@@ -24,8 +24,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             LeaveTypeSeeder::class,
+            OrganizationSeeder::class,
+            CompanySeeder::class,
             AdminSeeder::class,
-            EmployeeSeeder::class
+            EmployeeSeeder::class,
         ]);
     }
 }
