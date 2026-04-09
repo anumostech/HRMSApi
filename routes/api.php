@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Admin\HRApiController;
 use App\Http\Controllers\Api\Admin\DashboardApiController;
 use App\Http\Controllers\Api\Admin\PartyApiController;
 use App\Http\Controllers\Api\Admin\DocumentApiController;
+use App\Http\Controllers\Api\Admin\FolderApiController;
 use App\Http\Controllers\Api\Admin\LeaveApiController;
 use App\Http\Controllers\Api\Admin\WfhApiController;
 use App\Http\Controllers\Api\Admin\AttendanceApiController;
@@ -61,6 +62,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::apiResource('companies', CompanyApiController::class);
     Route::apiResource('parties', PartyApiController::class);
     Route::apiResource('documents', DocumentApiController::class);
+    Route::apiResource('folders', FolderApiController::class);
     Route::post('documents/upload', [DocumentApiController::class, 'upload']);
     Route::get('documents-folders', [DocumentApiController::class, 'getFolders']);
     Route::get('shareable-users', [DocumentApiController::class, 'getShareableUsers']);

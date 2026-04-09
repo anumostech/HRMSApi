@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ApiController;
 use App\Models\AttendanceLog;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\User;
 use App\Models\AttendanceUpload;
 use App\Jobs\ProcessAttendanceJob;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class AttendanceApiController extends ApiController
         $perPage = $request->get('per_page', 15);
         $companyId = $request->get('company_id');
         $employeeName = $request->get('employee_name');
-        $datePreset = $request->get('date_preset', 'today');
+        $datePreset = $request->get('date_preset', 'all');
 
         $query = AttendanceLog::with(['company', 'user'])
             ->select(
@@ -42,11 +43,14 @@ class AttendanceApiController extends ApiController
         if ($employeeName) {
             $query->whereHas('user', function ($q) use ($employeeName) {
                 $q->where('first_name', 'like', "%$employeeName%")
-                  ->orWhere('last_name', 'like', "%$employeeName%");
+                    ->orWhere('last_name', 'like', "%$employeeName%");
             });
         }
-
-        $this->applyDateFilter($query, $datePreset, $request->get('from_date'), $request->get('to_date'));
+        
+        if ($datePreset != 'all') {
+            $this->applyDateFilter($query, $datePreset, $request->get('from_date'), $request->get('to_date'));
+        }
+        
 
         $attendance = $query->groupBy('company_id', 'userid', 'log_date')
             ->orderBy('log_date', 'desc')
@@ -96,7 +100,8 @@ class AttendanceApiController extends ApiController
     public function uploadStatus($id): JsonResponse
     {
         $upload = AttendanceUpload::find($id);
-        if (!$upload) return $this->error('Upload record not found', 404);
+        if (!$upload)
+            return $this->error('Upload record not found', 404);
         return $this->success($upload);
     }
 
@@ -136,12 +141,12 @@ class AttendanceApiController extends ApiController
         $this->applyDateFilter($query, $datePreset, $request->get('from_date'), $request->get('to_date'));
 
         $query->select(
-                'company_id',
-                'userid',
-                'log_date',
-                DB::raw("MIN(punch_in) as punch_in"),
-                DB::raw("MAX(punch_out) as punch_out")
-            )
+            'company_id',
+            'userid',
+            'log_date',
+            DB::raw("MIN(punch_in) as punch_in"),
+            DB::raw("MAX(punch_out) as punch_out")
+        )
             ->groupBy('company_id', 'userid', 'log_date')
             ->havingRaw("TIME(MIN(punch_in)) > '08:10:59' AND TIME(MIN(punch_in)) <= '12:00:00'");
 
@@ -169,7 +174,7 @@ class AttendanceApiController extends ApiController
             ->where('status', 'active');
 
         if ($companyId) {
-            $query->whereHas('user', function($q) use ($companyId) {
+            $query->whereHas('user', function ($q) use ($companyId) {
                 $q->where('company_id', $companyId);
             });
         }
@@ -239,8 +244,8 @@ class AttendanceApiController extends ApiController
     private function getStats(): array
     {
         $today = Carbon::today()->toDateString();
-        $activeEmployeesCount = Employee::where('status', 'active')->count();
-        
+        $activeEmployeesCount = User::where('status', 'active')->count();
+
         $todayLogs = AttendanceLog::whereDate('log_date', $today)
             ->select('userid', DB::raw('MIN(punch_in) as punch_in'), DB::raw('MAX(punch_out) as punch_out'))
             ->groupBy('userid')
@@ -251,7 +256,8 @@ class AttendanceApiController extends ApiController
         })->count();
 
         $punchedLateCount = $todayLogs->filter(function ($log) {
-            if (!$log->punch_in) return false;
+            if (!$log->punch_in)
+                return false;
             $time = Carbon::parse($log->punch_in)->format('H:i:s');
             return $time > '08:10:59' && $time <= '12:00:00';
         })->count();

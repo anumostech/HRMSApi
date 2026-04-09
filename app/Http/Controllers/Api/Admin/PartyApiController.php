@@ -25,14 +25,11 @@ class PartyApiController extends ApiController
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
-            'city' => 'nullable|string|max:100',
-            'state' => 'nullable|string|max:100',
-            'country' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:20',
             'website' => 'nullable|string|max:255',
             'notes' => 'nullable|string'
         ]);
 
+        $validated['created_by'] = auth()->id();
         $party = Party::create($validated);
         return $this->success($party, 'Party created successfully', 201);
     }
@@ -51,10 +48,6 @@ class PartyApiController extends ApiController
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
-            'city' => 'nullable|string|max:100',
-            'state' => 'nullable|string|max:100',
-            'country' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:20',
             'website' => 'nullable|string|max:255',
             'notes' => 'nullable|string'
         ]);
@@ -65,6 +58,7 @@ class PartyApiController extends ApiController
 
     public function destroy(Party $party): JsonResponse
     {
+        $party->update(['deleted_by' => auth()->id()]);
         $party->delete();
         return $this->success(null, 'Party deleted successfully');
     }
