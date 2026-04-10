@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\ApiController;
+use App\Exports\AttendanceExport;
+use App\Exports\LeaveExport;
+use App\Exports\EmployeeExport;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
@@ -14,7 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportApiController extends ApiController
 {
@@ -24,37 +27,45 @@ class ReportApiController extends ApiController
     public function attendanceReport(Request $request): JsonResponse
     {
         $dateRange = $request->get('date_range', 'today');
-        $employeeId = $request->get('employee_id'); 
+        $employeeId = $request->get('employee_id');
         $departmentId = $request->get('department_id');
         $search = $request->get('search');
         $perPage = $request->get('per_page', 10);
 
-        list($startDate, $endDate) = $this->getDateRange($dateRange, $request->get('from_date'), $request->get('to_date'));
+        // Get start and end dates
+        list($startDate, $endDate) = $this->getDateRange(
+            $dateRange,
+            $request->get('from_date'),
+            $request->get('to_date')
+        );
 
+        // Employees query with user relations
         $employeesQuery = Employee::with(['user.company', 'user.department', 'user.designation'])
-            ->where('status', 'active');
+            ->whereRelation('user', 'status', 'active'); // Filter active users
 
+        // Filter by employee_id
         if ($employeeId && $employeeId !== 'all') {
             $employeesQuery->where('employee_id', $employeeId);
         }
 
+        // Filter by department
         if ($departmentId && $departmentId !== 'all') {
-            $employeesQuery->whereHas('user', function($q) use ($departmentId) {
-                $q->where('department_id', $departmentId);
-            });
+            $employeesQuery->whereRelation('user', 'department_id', $departmentId);
         }
 
+        // Search filter
         if ($search) {
-            $employeesQuery->where(function($q) use ($search) {
+            $employeesQuery->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('employee_id', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('employee_id', 'like', "%{$search}%");
             });
         }
 
         $employees = $employeesQuery->get();
         $employeeIds = $employees->pluck('employee_id')->toArray();
 
+        // Fetch attendance logs for selected employees within date range
         $allLogs = AttendanceLog::whereBetween('log_date', [$startDate, $endDate])
             ->whereIn('userid', $employeeIds)
             ->get()
@@ -64,6 +75,7 @@ class ReportApiController extends ApiController
         $tempDate = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
 
+        // Build report data
         while ($tempDate <= $end) {
             $dateStr = $tempDate->toDateString();
             $dayLogs = $allLogs->get($dateStr, collect());
@@ -72,7 +84,7 @@ class ReportApiController extends ApiController
                 $empLogs = $dayLogs->get($emp->employee_id);
                 $punchIn = $empLogs ? $empLogs->min('punch_in') : null;
                 $punchOut = $empLogs ? $empLogs->max('punch_out') : null;
-                
+
                 $status = 'Absent';
                 if ($punchIn) {
                     $time = Carbon::parse($punchIn)->format('H:i:s');
@@ -92,11 +104,13 @@ class ReportApiController extends ApiController
             $tempDate->addDay();
         }
 
-        usort($reportData, function($a, $b) {
+        // Sort by date descending
+        usort($reportData, function ($a, $b) {
             return strcmp($b['date'], $a['date']);
         });
 
-        $currentPage = request()->get('page', 1);
+        // Pagination
+        $currentPage = $request->get('page', 1);
         $total = count($reportData);
         $paginatedItems = array_slice($reportData, ($currentPage - 1) * $perPage, $perPage);
 
@@ -104,13 +118,12 @@ class ReportApiController extends ApiController
             'data' => $paginatedItems,
             'meta' => [
                 'total' => $total,
-                'per_page' => (int)$perPage,
-                'current_page' => (int)$currentPage,
+                'per_page' => (int) $perPage,
+                'current_page' => (int) $currentPage,
                 'last_page' => ceil($total / $perPage)
             ]
         ]);
     }
-
     /**
      * Leave Report Listing
      */
@@ -124,19 +137,19 @@ class ReportApiController extends ApiController
         list($startDate, $endDate) = $this->getDateRange($dateRange, $request->get('from_date'), $request->get('to_date'));
 
         $query = LeaveRequest::with(['employee.user.department', 'leaveType'])
-            ->where(function($q) use ($startDate, $endDate) {
+            ->where(function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('start_date', [$startDate, $endDate])
-                  ->orWhereBetween('end_date', [$startDate, $endDate]);
+                    ->orWhereBetween('end_date', [$startDate, $endDate]);
             });
 
         if ($employeeId && $employeeId !== 'all') {
-            $query->whereHas('employee', function($q) use ($employeeId) {
+            $query->whereHas('employee', function ($q) use ($employeeId) {
                 $q->where('employee_id', $employeeId);
             });
         }
 
         if ($departmentId && $departmentId !== 'all') {
-            $query->whereHas('employee.user', function($q) use ($departmentId) {
+            $query->whereHas('employee.user', function ($q) use ($departmentId) {
                 $q->where('department_id', $departmentId);
             });
         }
@@ -158,13 +171,13 @@ class ReportApiController extends ApiController
         $query = Employee::with(['user.department', 'user.designation', 'user.company']);
 
         if ($departmentId && $departmentId !== 'all') {
-            $query->whereHas('user', function($q) use ($departmentId) {
+            $query->whereHas('user', function ($q) use ($departmentId) {
                 $q->where('department_id', $departmentId);
             });
         }
 
         if ($companyId && $companyId !== 'all') {
-            $query->whereHas('user', function($q) use ($companyId) {
+            $query->whereHas('user', function ($q) use ($companyId) {
                 $q->where('company_id', $companyId);
             });
         }
@@ -179,31 +192,51 @@ class ReportApiController extends ApiController
      */
     public function export(Request $request)
     {
-        $reportType = $request->get('report_type'); 
+        $reportType = $request->get('report_type');
         $dateRange = $request->get('date_range', 'today');
         $employeeId = $request->get('employee_id');
         $departmentId = $request->get('department_id');
         $format = strtolower($request->get('format', 'csv'));
 
-        list($startDate, $endDate) = $this->getDateRange($dateRange, $request->get('from_date'), $request->get('to_date'));
+        list($startDate, $endDate) = $this->getDateRange(
+            $dateRange,
+            $request->get('from_date'),
+            $request->get('to_date')
+        );
 
         $data = [];
         $columns = [];
-        
+
         switch ($reportType) {
             case 'attendance':
                 $columns = ['Date', 'Employee ID', 'Name', 'Department', 'Punch In', 'Punch Out', 'Status'];
-                $empQuery = Employee::where('status', 'active')->with(['user.department']);
-                if ($employeeId && $employeeId !== 'all') $empQuery->where('employee_id', $employeeId);
-                if ($departmentId && $departmentId !== 'all') $empQuery->whereHas('user', fn($q) => $q->where('department_id', $departmentId));
+
+                $empQuery = Employee::with(['user.department'])
+                    ->whereRelation('user', 'status', 'active'); // Corrected here
+
+                if ($employeeId && $employeeId !== 'all') {
+                    $empQuery->where('employee_id', $employeeId);
+                }
+
+                if ($departmentId && $departmentId !== 'all') {
+                    $empQuery->whereRelation('user', 'department_id', $departmentId);
+                }
+
                 $employees = $empQuery->get();
                 $employeeIds = $employees->pluck('employee_id')->toArray();
-                $allLogs = AttendanceLog::whereBetween('log_date', [$startDate, $endDate])->whereIn('userid', $employeeIds)->get()->groupBy(['log_date', 'userid']);
+
+                $allLogs = AttendanceLog::whereBetween('log_date', [$startDate, $endDate])
+                    ->whereIn('userid', $employeeIds)
+                    ->get()
+                    ->groupBy(['log_date', 'userid']);
+
                 $tempDate = Carbon::parse($startDate);
                 $end = Carbon::parse($endDate);
+
                 while ($tempDate <= $end) {
                     $dateStr = $tempDate->toDateString();
                     $dayLogs = $allLogs->get($dateStr, collect());
+
                     foreach ($employees as $emp) {
                         $empLogs = $dayLogs->get($emp->employee_id);
                         $punchIn = $empLogs ? $empLogs->min('punch_in') : null;
@@ -213,96 +246,124 @@ class ReportApiController extends ApiController
                             $time = Carbon::parse($punchIn)->format('H:i:s');
                             $status = ($time > '08:10:59' && $time <= '12:00:00') ? 'Late' : 'Present';
                         }
-                        $data[] = [$dateStr, $emp->employee_id, $emp->first_name . ' ' . $emp->last_name, $emp->user->department->name ?? 'N/A', $punchIn ? Carbon::parse($punchIn)->format('H:i') : '-', $punchOut ? Carbon::parse($punchOut)->format('H:i') : '-', $status];
+
+                        $data[] = [
+                            $dateStr,
+                            $emp->employee_id,
+                            $emp->first_name . ' ' . $emp->last_name,
+                            $emp->user->department->name ?? 'N/A',
+                            $punchIn ? Carbon::parse($punchIn)->format('H:i') : '-',
+                            $punchOut ? Carbon::parse($punchOut)->format('H:i') : '-',
+                            $status
+                        ];
                     }
+
                     $tempDate->addDay();
                 }
                 break;
 
             case 'leave':
                 $columns = ['Employee ID', 'Name', 'Leave Type', 'From', 'To', 'Days', 'Status', 'Reason'];
-                $leaveQuery = LeaveRequest::with(['employee', 'leaveType'])->where(function($q) use ($startDate, $endDate) { $q->whereBetween('start_date', [$startDate, $endDate])->orWhereBetween('end_date', [$startDate, $endDate]); });
-                if ($employeeId && $employeeId !== 'all') $leaveQuery->whereHas('employee', fn($q) => $q->where('employee_id', $employeeId));
-                if ($departmentId && $departmentId !== 'all') $leaveQuery->whereHas('employee.user', fn($q) => $q->where('department_id', $departmentId));
+                $leaveQuery = LeaveRequest::with(['employee.user', 'leaveType'])
+                    ->where(function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('start_date', [$startDate, $endDate])
+                            ->orWhereBetween('end_date', [$startDate, $endDate]);
+                    });
+
+                if ($employeeId && $employeeId !== 'all') {
+                    $leaveQuery->whereHas('employee', fn($q) => $q->where('employee_id', $employeeId));
+                }
+
+                if ($departmentId && $departmentId !== 'all') {
+                    $leaveQuery->whereHas('employee.user', fn($q) => $q->where('department_id', $departmentId));
+                }
+
                 $leaves = $leaveQuery->get();
+
                 foreach ($leaves as $leave) {
-                    $data[] = [$leave->employee->employee_id ?? 'N/A', ($leave->employee->first_name ?? '') . ' ' . ($leave->employee->last_name ?? ''), $leave->leaveType->name ?? 'N/A', $leave->start_date->toDateString(), $leave->end_date->toDateString(), $leave->duration_days, ucfirst($leave->status), $leave->reason];
+                    $data[] = [
+                        $leave->employee->employee_id ?? 'N/A',
+                        ($leave->employee->first_name ?? '') . ' ' . ($leave->employee->last_name ?? ''),
+                        $leave->leaveType->name ?? 'N/A',
+                        $leave->start_date->toDateString(),
+                        $leave->end_date->toDateString(),
+                        $leave->duration_days,
+                        ucfirst($leave->status),
+                        $leave->reason
+                    ];
                 }
                 break;
 
             case 'employee':
                 $columns = ['Employee ID', 'Name', 'Company', 'Department', 'Designation', 'Joining Date', 'Status'];
-                $empQuery = Employee::with(['user.company', 'user.department', 'user.designation']);
-                if ($departmentId && $departmentId !== 'all') $empQuery->whereHas('user', fn($q) => $q->where('department_id', $departmentId));
+                $empQuery = Employee::with(['user.company', 'user.department', 'user.designation'])
+                    ->whereRelation('user', 'status', 'active'); // Corrected here
+
+                if ($departmentId && $departmentId !== 'all') {
+                    $empQuery->whereRelation('user', 'department_id', $departmentId);
+                }
+
                 $employees = $empQuery->get();
+
                 foreach ($employees as $emp) {
-                    $data[] = [$emp->employee_id, $emp->first_name . ' ' . $emp->last_name, $emp->user->company->name ?? 'N/A', $emp->user->department->name ?? 'N/A', $emp->user->designation->name ?? 'N/A', $emp->joining_date, ucfirst($emp->status)];
+                    $data[] = [
+                        $emp->employee_id,
+                        $emp->first_name . ' ' . $emp->last_name,
+                        $emp->user->company->name ?? 'N/A',
+                        $emp->user->department->name ?? 'N/A',
+                        $emp->user->designation->name ?? 'N/A',
+                        $emp->joining_date,
+                        ucfirst($emp->user->status) // Corrected here
+                    ];
                 }
                 break;
         }
 
-        if ($format === 'excel') {
-            return $this->downloadExcel("report_{$reportType}_" . now()->format('YmdHis') . ".xls", $columns, $data);
+        $filename  = "report_{$reportType}_" . now()->format('YmdHis');
+
+        // Build the appropriate Export class
+        $exportClass = match ($reportType) {
+            'attendance' => new AttendanceExport($data),
+            'leave'      => new LeaveExport($data),
+            'employee'   => new EmployeeExport($data),
+            default      => null,
+        };
+
+        if (!$exportClass) {
+            return $this->error('Invalid report type', 400);
         }
 
-        return $this->downloadCsv("report_{$reportType}_" . now()->format('YmdHis') . ".csv", $columns, $data);
+        if ($format === 'excel') {
+            return Excel::download($exportClass, $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX);
+        }
+
+        // Default: CSV via maatwebsite/excel
+        return Excel::download($exportClass, $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
     }
 
     /**
      * Helper: Get Date Range Group
      */
-    private function getDateRange($preset, $from = null, $to = null)
+    private function getDateRange($preset, $from = null, $to = null): array
     {
         $now = Carbon::now();
         switch ($preset) {
-            case 'today': return [$now->toDateString(), $now->toDateString()];
-            case 'yesterday': $y = $now->subDay()->toDateString(); return [$y, $y];
-            case 'this_week': return [$now->startOfWeek()->toDateString(), Carbon::now()->endOfWeek()->toDateString()];
-            case 'this_month': return [$now->startOfMonth()->toDateString(), Carbon::now()->endOfMonth()->toDateString()];
-            case 'custom': if ($from && $to) { return [Carbon::parse($from)->toDateString(), Carbon::parse($to)->toDateString()]; } return [$now->toDateString(), $now->toDateString()];
-            default: return [$now->toDateString(), $now->toDateString()];
+            case 'today':
+                return [$now->toDateString(), $now->toDateString()];
+            case 'yesterday':
+                $y = $now->subDay()->toDateString();
+                return [$y, $y];
+            case 'this_week':
+                return [$now->startOfWeek()->toDateString(), Carbon::now()->endOfWeek()->toDateString()];
+            case 'this_month':
+                return [$now->startOfMonth()->toDateString(), Carbon::now()->endOfMonth()->toDateString()];
+            case 'custom':
+                if ($from && $to) {
+                    return [Carbon::parse($from)->toDateString(), Carbon::parse($to)->toDateString()];
+                }
+                return [$now->toDateString(), $now->toDateString()];
+            default:
+                return [$now->toDateString(), $now->toDateString()];
         }
-    }
-
-    /**
-     * Helper: Download CSV
-     */
-    private function downloadCsv($filename, $columns, $data)
-    {
-        $headers = ['Cache-Control' => 'must-revalidate, post-check=0, pre-check=0', 'Content-type' => 'text/csv', 'Content-Disposition' => "attachment; filename=$filename", 'Expires' => '0', 'Pragma' => 'public'];
-        $callback = function() use ($columns, $data) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $columns);
-            foreach ($data as $row) { fputcsv($file, $row); }
-            fclose($file);
-        };
-        return response()->stream($callback, 200, $headers);
-    }
-
-    /**
-     * Helper: Download Excel (HTML Fallback)
-     */
-    private function downloadExcel($filename, $columns, $data)
-    {
-        $headers = [
-            'Content-Type' => 'application/vnd.ms-excel',
-            'Content-Disposition' => "attachment; filename=$filename",
-            'Cache-Control' => 'max-age=0',
-        ];
-
-        $callback = function() use ($columns, $data) {
-            echo '<table border="1">';
-            echo '<tr>';
-            foreach ($columns as $column) { echo '<th style="background-color: #f2f2f2;">' . $column . '</th>'; }
-            echo '</tr>';
-            foreach ($data as $row) {
-                echo '<tr>';
-                foreach ($row as $cell) { echo '<td>' . $cell . '</td>'; }
-                echo '</tr>';
-            }
-            echo '</table>';
-        };
-
-        return response()->stream($callback, 200, $headers);
     }
 }

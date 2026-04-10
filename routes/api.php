@@ -99,8 +99,6 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::group(['prefix' => 'reports'], function () {
         Route::get('attendance', [ReportApiController::class, 'attendanceReport']);
         Route::get('leaves', [ReportApiController::class, 'leaveReport']);
-        // If you still want the previous staffing/summaries, I can keep them, 
-        // but for the UI table listing:
         Route::get('employees', [ReportApiController::class, 'employeeReport']);
         Route::get('export', [ReportApiController::class, 'export']);
     });
@@ -111,7 +109,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'employee'], function () {
     Route::get('dashboard', [EmployeePortalApiController::class, 'dashboard']);
     Route::post('punch-in', [EmployeePortalApiController::class, 'punchIn']);
     Route::post('punch-out', [EmployeePortalApiController::class, 'punchOut']);
-    
+
     // Leaves
     Route::get('leaves', [EmployeePortalApiController::class, 'leaves']);
     Route::get('leave-balance', [EmployeePortalApiController::class, 'leaveTypesAndBalance']);
