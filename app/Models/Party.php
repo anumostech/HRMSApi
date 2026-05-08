@@ -16,11 +16,9 @@ class Party extends Model
         'email',
         'phone',
         'address',
-        'city',
-        'state',
-        'country',
-        'postal_code',
         'website',
-        'notes'
+        'notes',
+        'created_by',
+        'deleted_by'
     ];
 }

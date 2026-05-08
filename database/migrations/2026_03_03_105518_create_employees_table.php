@@ -14,11 +14,8 @@ return new class extends Migration {
             $table->id();
             $table->string('first_name');
             $table->string('last_name')->nullable();
+            $table->string('user_id');
             $table->string('employee_id');
-            $table->string('designation_id')->nullable();
-            $table->foreignId('organization_id');
-            $table->foreignId('company_id');
-            $table->foreignId('department_id');
             $table->date('dob')->nullable();
             $table->date('joining_date')->nullable();
             $table->string('gender')->nullable();
@@ -68,13 +65,14 @@ return new class extends Migration {
             $table->string('personal_number')->nullable();
             $table->string('other_number')->nullable();
             $table->string('home_country_number')->nullable();
-            $table->string('company_email')->nullable();
-            $table->string('personal_email')->nullable();
+            $table->string('company_email');
+            $table->string('personal_email');
             $table->string('home_country_id_proof')->nullable();
-
-            $table->enum('status', ['active', 'inactive'])->default('active');
-            $table->softDeletes();
+            $table->integer('total_leaves_allocated')->default(null);
+            $table->integer('created_by')->nullable();
+            $table->integer('deleted_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

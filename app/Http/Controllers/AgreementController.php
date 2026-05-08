@@ -11,8 +11,6 @@ class AgreementController extends Controller
 {
     public function index(Request $request)
     {
-        $perPage = $request->get('per_page', 15);
-
         $agreements = Document::with('shareWith')->where('type', 'agreement')->latest()->get();
         $parties = Party::select('id', 'name')->get();
         $share_with = User::select('id', 'name')->get();

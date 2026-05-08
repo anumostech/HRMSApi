@@ -22,7 +22,7 @@ class LeaveTypeSeeder extends Seeder
         ];
 
         foreach ($types as $type) {
-            \App\Models\LeaveType::updateOrCreate(['name' => $type['name']], $type);
+            \App\Models\LeaveType::updateOrCreate(['name' => $type['name'], 'created_by' => NULL, 'deleted_by' => NULL], $type);
         }
     }
 }

@@ -40,9 +40,9 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        'employee' => [
-            'driver' => 'session',
-            'provider' => 'employees',
+        'api' => [
+            'driver' => 'jwt',
+            'provider' => 'users',
         ],
     ],
 
@@ -67,10 +67,6 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
-        ],
-        'employees' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\Employee::class,
         ],
     ],
 

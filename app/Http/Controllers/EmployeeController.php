@@ -13,6 +13,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use App\Models\User;
+use App\Mail\UserRegistrationMail;
 
 class EmployeeController extends Controller
 {
@@ -95,9 +99,41 @@ class EmployeeController extends Controller
         $data['special_days'] = !empty($specialDays) ? $specialDays : null;
 
         $data['organization_id'] = 1;
-        $data['password'] = Hash::make('Thesay@ae');
+        
+        // 1. Create User
+        $randomPassword = Str::random(10);
+        $user = User::create([
+            'username' => $data['company_email'],
+            'email' => $data['company_email'],
+            'password' => Hash::make($randomPassword),
+            'organization_id' => $data['organization_id'] ?? 1,
+            'company_id' => $data['company_id'],
+            'department_id' => $data['department_id'] ?? null,
+            'designation_id' => $data['designation_id'] ?? null,
+            'type' => 'employee',
+            'status' => 'active',
+        ]);
 
-        Employee::create($data);
+        // Assign Role
+        $user->assignRole('Employee');
+
+        // 2. Create Employee linked to User
+        $data['user_id'] = $user->id;
+
+        // Remove fields that are now on User table
+        unset($data['organization_id'], $data['company_id'], $data['department_id'], $data['designation_id'], $data['password']);
+
+        $employee = Employee::create($data);
+
+        // Send Email to both personal and company emails
+        $recipients = array_filter([$employee->company_email, $employee->personal_email]);
+        if (!empty($recipients)) {
+            try {
+                Mail::to($recipients)->send(new UserRegistrationMail($user, $randomPassword, $employee));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send registration email: ' . $e->getMessage());
+            }
+        }
 
         return redirect()->back()->with('success', 'Employee created successfully.');
     }

@@ -3,24 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Carbon\Carbon;
 
-class Employee extends Authenticatable
+class Employee extends Model
 {
     use SoftDeletes, Notifiable;
-
-    /**
-     * The "booted" method of the model.
-     */
-    protected static function booted()
-    {
-        static::addGlobalScope('active', function (Builder $builder) {
-            $builder->where('status', 'active');
-        });
-    }
 
     /**
      * Scope a query to include inactive employees.
@@ -46,22 +36,11 @@ class Employee extends Authenticatable
         return $this->withInactive()->where($field ?? $this->getRouteKeyName(), $value)->first();
     }
 
-    /**
-     * The username field for authentication.
-     */
-    public function username()
-    {
-        return 'company_email';
-    }
-
     protected $fillable = [
+        'user_id',
         'first_name',
         'last_name',
-        'organization_id',
         'employee_id',
-        'designation_id',
-        'department_id',
-        'company_id',
         'dob',
         'joining_date',
         'gender',
@@ -104,41 +83,24 @@ class Employee extends Authenticatable
         'home_country_id_proof',
         'status',
         'total_leaves_allocated',
-        'password',
         'avatar',
-    ];
-
-    protected $hidden = [
-        'password',
-        'remember_token',
     ];
 
     protected $casts = [
         'special_days' => 'array',
-        'password' => 'hashed',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function getAvatarUrlAttribute()
     {
         if ($this->avatar && file_exists(storage_path('app/public/' . $this->avatar))) {
             return asset('storage/' . $this->avatar);
         }
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=6366f1&background=eef2ff';
-    }
-
-    public function company()
-    {
-        return $this->belongsTo(Company::class);
-    }
-
-    public function department()
-    {
-        return $this->belongsTo(Department::class, 'department_id');
-    }
-
-     public function designation()
-    {
-        return $this->belongsTo(Designation::class, 'designation_id');
+        return $this->user ? $this->user->avatar_url : 'https://ui-avatars.com/api/?name=' . urlencode($this->first_name) . '&color=fff&background=2ecc71';
     }
 
     public function attendanceLogs()
@@ -149,11 +111,5 @@ class Employee extends Authenticatable
     public function leaveRequests()
     {
         return $this->hasMany(LeaveRequest::class);
-    }
-
-    public function setDateAttribute($value)
-    {
-        $this->attributes['date'] = Carbon::createFromFormat('d-m-Y', $value)
-            ->format('Y-m-d');
     }
 }

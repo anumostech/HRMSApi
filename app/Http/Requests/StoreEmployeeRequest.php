@@ -66,17 +66,19 @@ class StoreEmployeeRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'avatar' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:2048',
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'organization_id' => 'nullable|exists:organizations,id',
-            'employee_id' => 'nullable|unique:employees,employee_id',
-            'designation_id' => 'nullable|string|max:255',
-            'department_id' => 'nullable|string|max:255',
+            'organization_id' => 'required|exists:organizations,id',
+            'employee_id' => 'required|unique:employees,employee_id',
+            'designation_id' => 'required|exists:designations,id',
+            'department_id' => 'required|exists:departments,id',
             'company_id' => 'required|exists:companies,id',
             'dob' => 'nullable|date',
             'joining_date' => 'nullable|date',
             'gender' => 'nullable|string|max:255',
-            'special_days' => 'nullable|string',
+            'nationality' => 'nullable|string|max:255',
+            'marital_status' => 'nullable|string|max:255',
             'special_days_name.*' => 'nullable|string|max:255',
             'special_days_date.*' => 'nullable|date',
 
@@ -92,17 +94,17 @@ class StoreEmployeeRequest extends FormRequest
             'address' => 'nullable|string',
 
             // Documents
-            'passport_1st_page' => 'nullable|string',
-            'passport_2nd_page' => 'nullable|string',
-            'passport_outer_page' => 'nullable|string',
-            'passport_id_page' => 'nullable|string',
-            'visa_page' => 'nullable|string',
-            'labor_card' => 'nullable|string',
-            'eid_1st_page' => 'nullable|string',
-            'eid_2nd_page' => 'nullable|string',
-            'educational_1st_page' => 'nullable|string',
-            'educational_2nd_page' => 'nullable|string',
-            'home_country_id_proof' => 'nullable|string',
+            'passport_1st_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'passport_2nd_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'passport_outer_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'passport_id_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'visa_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'labor_card' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'eid_1st_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'eid_2nd_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'educational_1st_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'educational_2nd_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'home_country_id_proof' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
 
             // Details
             'visa_number' => 'nullable|string|max:255',
@@ -119,11 +121,14 @@ class StoreEmployeeRequest extends FormRequest
             'personal_number' => 'nullable|string|max:255',
             'other_number' => 'nullable|string|max:255',
             'home_country_number' => 'nullable|string|max:255',
-            'company_email' => 'nullable|email|max:255',
-            'personal_email' => 'nullable|email|max:255',
+            'company_email' => 'required|email|max:255',
+            'personal_email' => 'required|email|max:255',
             'status' => 'nullable|in:active,inactive',
-            'total_leaves_allocated' => 'nullable|integer|min:0',
+            'total_leaves_allocated' => 'required|integer|min:0',
+            'username' => 'nullable|string|max:255|unique:users,username',
             'password' => 'nullable|string|max:255',
+            'type' => 'required|in:admin,manager,employee,field_employee,driver,remote_employee',
+            'role' => 'nullable|string|max:255',
         ];
     }
 
