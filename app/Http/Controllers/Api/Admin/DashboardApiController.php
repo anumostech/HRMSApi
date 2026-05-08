@@ -8,6 +8,7 @@ use App\Models\AttendanceLog;
 use App\Models\Document;
 use App\Models\User;
 use App\Models\Party;
+use App\Models\Folder;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -20,18 +21,64 @@ class DashboardApiController extends ApiController
      */
     public function index(Request $request): JsonResponse
     {
-        $organization_files = Document::with('shareWith')->where('type', 'organization')->latest()->take(10)->get();
-        $agreements = Document::with('shareWith')->where('type', 'agreement')->latest()->take(10)->get();
-        $others = Document::with('shareWith')->where('type', 'others')->latest()->take(10)->get();
-        $hr = Document::with('shareWith')->where('type', 'hr')->latest()->take(10)->get();
+        $hr = Document::with('folder')
+            ->where('type', 'hr')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($doc) {
+                $doc->folder_name = $doc->folder?->name;
+                $doc->shared_users = User::whereIn('id', $doc->share_with ?? [])->get();
+                return $doc;
+            });
 
-        $folders = Document::with('folder')->select('id','name')
-            ->distinct()
-            ->pluck('name');
+        $agreements = Document::with('folder')
+            ->where('type', 'agreements')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($doc) {
+                $doc->folder_name = $doc->folder?->name;
+                $doc->shared_users = User::whereIn('id', $doc->share_with ?? [])->get();
+                return $doc;
+            });
+
+        $others = Document::with('folder')
+            ->where('type', 'others')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($doc) {
+                $doc->folder_name = $doc->folder?->name;
+                $doc->shared_users = User::whereIn('id', $doc->share_with ?? [])->get();
+                return $doc;
+            });
+
+        $organization_files = Document::with('folder')
+            ->where('type', 'organization')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($doc) {
+                $doc->folder_name = $doc->folder?->name;
+                $doc->shared_users = User::whereIn('id', $doc->share_with ?? [])->get();
+                return $doc;
+            });
+
+        $folders = Folder::all();
 
         $share_with = User::with(['employee', 'company', 'department'])->select('id', 'username')->get();
         $parties = Party::select('id', 'name')->get();
-        $employees = Employee::latest()->take(10)->get();
+        $employees = Employee::with([
+            'user.department',
+            'user.designation',
+            'user.company'
+        ])
+            ->whereHas('user', function ($query) {
+                $query->where('type', '!=', 'admin')
+                    ->where('status', 'active');
+            })
+            ->get();
 
         $today = Carbon::today();
         $yesterday = Carbon::yesterday();
@@ -82,9 +129,9 @@ class DashboardApiController extends ApiController
                 'others' => $others,
                 'hr' => $hr,
                 'employees' => $employees,
+                'folders' => $folders,
             ],
             'metadata' => [
-                'folders' => $folders,
                 'share_with' => $share_with,
                 'parties' => $parties,
             ]
@@ -226,7 +273,10 @@ class DashboardApiController extends ApiController
      */
     private function getAttendanceStatsByDate($date): array
     {
-        $totalEmployees = Employee::count();
+        $totalEmployees = Employee::whereHas('user', function ($query) {
+            $query->where('status', 'active')
+                ->where('type', '!=', 'admin');
+        })->count();
 
         $logs = AttendanceLog::whereDate('log_date', $date)
             ->select(

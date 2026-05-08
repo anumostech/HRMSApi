@@ -23,7 +23,7 @@ return new class extends Migration {
             $table->string('file_path');
             $table->foreignId('party_id')->nullable();
             $table->foreignId('folder_id')->nullable();
-            $table->foreignId('share_with')->nullable();
+            $table->json('share_with')->nullable();
             $table->date('expiry_date')->nullable();
             $table->timestamps();
             $table->integer('created_by')->nullable();

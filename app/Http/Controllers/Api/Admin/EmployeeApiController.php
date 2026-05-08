@@ -100,15 +100,24 @@ class EmployeeApiController extends ApiController
         // Update User part if User exists
         if ($employee->user) {
             $userData = [];
-            if (isset($data['username'])) $userData['username'] = $data['username'];
-            if (isset($data['company_email'])) $userData['email'] = $data['company_email'];
-            if (!empty($data['password'])) $userData['password'] = Hash::make($data['password']);
-            if (isset($data['organization_id'])) $userData['organization_id'] = $data['organization_id'];
-            if (isset($data['company_id'])) $userData['company_id'] = $data['company_id'];
-            if (isset($data['department_id'])) $userData['department_id'] = $data['department_id'];
-            if (isset($data['designation_id'])) $userData['designation_id'] = $data['designation_id'];
-            if (isset($data['type'])) $userData['type'] = $data['type'];
-            if (isset($data['status'])) $userData['status'] = $data['status'];
+            if (isset($data['username']))
+                $userData['username'] = $data['username'];
+            if (isset($data['company_email']))
+                $userData['email'] = $data['company_email'];
+            if (!empty($data['password']))
+                $userData['password'] = Hash::make($data['password']);
+            if (isset($data['organization_id']))
+                $userData['organization_id'] = $data['organization_id'];
+            if (isset($data['company_id']))
+                $userData['company_id'] = $data['company_id'];
+            if (isset($data['department_id']))
+                $userData['department_id'] = $data['department_id'];
+            if (isset($data['designation_id']))
+                $userData['designation_id'] = $data['designation_id'];
+            if (isset($data['type']))
+                $userData['type'] = $data['type'];
+            if (isset($data['status']))
+                $userData['status'] = $data['status'];
 
             if (!empty($userData)) {
                 $employee->user->update($userData);
@@ -150,9 +159,29 @@ class EmployeeApiController extends ApiController
         return $this->success($employee->load('user'), 'Status updated successfully');
     }
 
+    public function uploadTemp(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120'
+        ]);
+
+        $file = $request->file('file');
+
+        $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+
+        $path = $file->storeAs('temp', $fileName, 'public');
+
+        return response()->json([
+            'status' => true,
+            'path' => $path,
+            'url'  => Storage::disk('public')->url($path)
+        ]);
+    }
+
     private function handleDocuments(array $data): array
     {
         $documentFields = [
+            'avatar',
             'passport_1st_page',
             'passport_2nd_page',
             'passport_outer_page',

@@ -71,7 +71,7 @@ class AttendanceApiController extends ApiController
     {
         $request->validate([
             'file' => 'required|file|mimes:dat,csv,txt|max:2048',
-            'company_id' => 'required|exists:companies,id'
+            // 'company_id' => 'required|exists:companies,id'
         ]);
 
         try {
@@ -96,13 +96,13 @@ class AttendanceApiController extends ApiController
             // Save in DB
             $upload = AttendanceUpload::create([
                 'file_path' => $path, // e.g. attendance/xyz.txt
-                'company_id' => $request->company_id,
+                // 'company_id' => $request->company_id,
                 'status' => 'pending',
                 'progress' => 0
             ]);
 
             // Dispatch job
-            ProcessAttendanceJob::dispatch($upload->id, $request->company_id);
+            ProcessAttendanceJob::dispatch($upload->id);
 
             return response()->json([
                 'upload_id' => $upload->id,

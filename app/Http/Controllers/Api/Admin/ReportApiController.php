@@ -188,6 +188,111 @@ class ReportApiController extends ApiController
     }
 
     /**
+     * Employee Details Report
+     */
+    public function employeeDetails(): JsonResponse
+    {
+        $employees = Employee::with(['user.company', 'user.department', 'user.designation'])->get();
+        return $this->success($employees);
+    }
+
+    /**
+     * Employee Nearest Expiry (within 30 days)
+     */
+    public function employeeNearestExpiry(): JsonResponse
+    {
+        $threshold = Carbon::now()->addDays(30);
+        $employees = Employee::where(function ($query) use ($threshold) {
+            $query->whereDate('passport_expiry_date', '<=', $threshold)
+                ->orWhereDate('visa_expiry_date', '<=', $threshold)
+                ->orWhereDate('labor_expiry_date', '<=', $threshold)
+                ->orWhereDate('eid_expiry_date', '<=', $threshold);
+        })->get();
+
+        return $this->success([
+            'employees' => $employees,
+            'title' => 'Employee Nearest Expiry Details',
+            'subtitle' => 'Expiring within 30 days'
+        ]);
+    }
+
+    /**
+     * Employee Upcoming Renewals (31-90 days)
+     */
+    public function employeeUpcomingRenewals(): JsonResponse
+    {
+        $start = Carbon::now()->addDays(31);
+        $end = Carbon::now()->addDays(90);
+
+        $employees = Employee::where(function ($query) use ($start, $end) {
+            $query->whereBetween('passport_expiry_date', [$start, $end])
+                ->orWhereBetween('visa_expiry_date', [$start, $end])
+                ->orWhereBetween('labor_expiry_date', [$start, $end])
+                ->orWhereBetween('eid_expiry_date', [$start, $end]);
+        })->get();
+
+        return $this->success([
+            'employees' => $employees,
+            'title' => 'Employee Upcoming Renewals',
+            'subtitle' => 'Expiring within 31-90 days'
+        ]);
+    }
+
+    /**
+     * Company Nearest Expiry (within 30 days)
+     */
+    public function companyNearestExpiry(): JsonResponse
+    {
+        $threshold = Carbon::now()->addDays(30);
+        $companies = Company::where(function ($query) use ($threshold) {
+            $query->whereDate('trade_license_expiry', '<=', $threshold)
+                ->orWhereDate('establishment_card_expiry', '<=', $threshold);
+        })->get();
+
+        return $this->success([
+            'companies' => $companies,
+            'title' => 'Company Nearest Expiry Details',
+            'subtitle' => 'Expiring within 30 days'
+        ]);
+    }
+
+    /**
+     * Company Upcoming Renewals (31-90 days)
+     */
+    public function companyUpcomingRenewals(): JsonResponse
+    {
+        $start = Carbon::now()->addDays(31);
+        $end = Carbon::now()->addDays(90);
+
+        $companies = Company::where(function ($query) use ($start, $end) {
+            $query->whereBetween('trade_license_expiry', [$start, $end])
+                ->orWhereBetween('establishment_card_expiry', [$start, $end]);
+        })->get();
+
+        return $this->success([
+            'companies' => $companies,
+            'title' => 'Company Upcoming Renewals',
+            'subtitle' => 'Expiring within 31-90 days'
+        ]);
+    }
+
+    /**
+     * Pending Leave Requests Report
+     */
+    public function pendingLeavesReport(): JsonResponse
+    {
+        $leaves = LeaveRequest::with(['employee', 'leaveType'])
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return $this->success([
+            'leaves' => $leaves,
+            'title' => 'Employees Pending Leave Reports'
+        ]);
+    }
+
+    /**
      * Export Report
      */
     public function export(Request $request)

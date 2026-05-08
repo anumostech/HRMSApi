@@ -17,7 +17,10 @@ class DocumentApiController extends ApiController
         $folder = $request->get('folder');
         $perPage = $request->get('per_page', 15);
 
-        $query = Document::with(['party', 'shareWith'])->latest();
+        $query = Document::join('folders', 'documents.folder_id', '=', 'folders.id')
+            ->select('documents.*', 'folders.name as folder_name')
+            ->with(['party'])
+            ->latest();
 
         if ($type) {
             $query->where('type', $type);
@@ -28,6 +31,7 @@ class DocumentApiController extends ApiController
         }
 
         $documents = $query->paginate($perPage);
+        $documents->getCollection()->each->append('shared_users');
 
         return $this->success($documents);
     }
@@ -55,13 +59,13 @@ class DocumentApiController extends ApiController
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:organization,agreement,hr,others',
+            'type' => 'required|in:organization,agreements,hr,others',
             'description' => 'nullable|string',
             'file_path' => 'required|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
             'folder_id' => 'required|exists:folders,id',
             'party_id' => 'nullable|exists:parties,id',
-            'share_with' => 'nullable|exists:users,id',
-            'expiry_date' => 'nullable|date_format:d-m-Y|after:today'
+            'share_with' => 'nullable|array',
+            'expiry_date' => 'nullable|date|after:today'
         ]);
 
         $folder_id = $request->folder_id;
@@ -88,7 +92,7 @@ class DocumentApiController extends ApiController
             'file_path' => $newPath,
             'folder_id' => $folder_id,
             'party_id' => $request->party_id,
-            'share_with' => $request->share_with,
+            'share_with' => $request->share_with ?? [],
             'expiry_date' => $request->expiry_date
         ]);
 
@@ -97,21 +101,20 @@ class DocumentApiController extends ApiController
 
     public function show(Document $document): JsonResponse
     {
-        return $this->success($document->load(['party', 'shareWith']));
+        return $this->success($document->load(['party'])->append('shared_users'));
     }
 
     public function update(Request $request, Document $document): JsonResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:organization,agreement,hr,others',
+            'type' => 'required|in:organization,agreements,hr,others',
             'description' => 'nullable|string',
-            
             'file_path' => 'required|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
             'folder_id' => 'required|exists:folders,id',
             'party_id' => 'nullable|exists:parties,id',
-            'share_with' => 'nullable|exists:users,id',
-            'expiry_date' => 'nullable|date_format:d-m-Y'
+            'share_with' => 'nullable|array',
+            'expiry_date' => 'nullable|date|after:today'
         ]);
 
         $document->update($request->only([

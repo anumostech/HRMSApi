@@ -16,8 +16,11 @@ use App\Http\Controllers\Api\Admin\WfhApiController;
 use App\Http\Controllers\Api\Admin\AttendanceApiController;
 use App\Http\Controllers\Api\Admin\LeaveTypeApiController;
 use App\Http\Controllers\Api\Admin\ReportApiController;
+use App\Http\Controllers\Api\Admin\AttendanceRequestApiController as AdminAttendanceRequestApiController;
+use App\Http\Controllers\Api\Admin\LeaveAllocationApiController;
 use App\Http\Controllers\Api\Employee\EmployeePortalApiController;
 use App\Http\Controllers\Api\Employee\ProfileApiController;
+use App\Http\Controllers\Api\Employee\AttendanceRequestApiController as EmployeeAttendanceRequestApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +49,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
 
     // Employees
     Route::apiResource('employees', EmployeeApiController::class);
+    Route::post('employees/upload-temp', [EmployeeApiController::class, 'uploadTemp']);
     Route::post('employees/{employee}/update-status', [EmployeeApiController::class, 'updateStatus']);
 
     // Attendance
@@ -57,6 +61,12 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::get('attendance/punch-out-today', [AttendanceApiController::class, 'punchOutToday']);
     Route::get('attendance/late-comers', [AttendanceApiController::class, 'lateComers']);
     Route::get('attendance/absentees', [AttendanceApiController::class, 'absentees']);
+
+    // Attendance Requests
+    Route::get('attendance-requests', [AdminAttendanceRequestApiController::class, 'index']);
+    Route::post('attendance-requests/{attendanceRequest}/status', [AdminAttendanceRequestApiController::class, 'updateStatus']);
+    Route::put('attendance-requests/{attendanceRequest}', [AdminAttendanceRequestApiController::class, 'update']);
+    Route::delete('attendance-requests/{attendanceRequest}', [AdminAttendanceRequestApiController::class, 'destroy']);
 
     // Organizations & Companies
     Route::apiResource('organizations', OrganizationApiController::class);
@@ -95,11 +105,22 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::apiResource('leave-types', LeaveTypeApiController::class);
     Route::post('leave-types/{leaveType}/status', [LeaveTypeApiController::class, 'updateStatus']);
 
+    // Leave Allocations
+    Route::get('leave-allocations', [LeaveAllocationApiController::class, 'index']);
+    Route::get('leave-allocations/{employee}', [LeaveAllocationApiController::class, 'show']);
+    Route::post('leave-allocations/{employee}', [LeaveAllocationApiController::class, 'update']);
+
     // Reports
     Route::group(['prefix' => 'reports'], function () {
         Route::get('attendance', [ReportApiController::class, 'attendanceReport']);
         Route::get('leaves', [ReportApiController::class, 'leaveReport']);
         Route::get('employees', [ReportApiController::class, 'employeeReport']);
+        Route::get('employee-details', [ReportApiController::class, 'employeeDetails']);
+        Route::get('employee-nearest-expiry', [ReportApiController::class, 'employeeNearestExpiry']);
+        Route::get('employee-upcoming-renewals', [ReportApiController::class, 'employeeUpcomingRenewals']);
+        Route::get('company-nearest-expiry', [ReportApiController::class, 'companyNearestExpiry']);
+        Route::get('company-upcoming-renewals', [ReportApiController::class, 'companyUpcomingRenewals']);
+        Route::get('pending-leaves', [ReportApiController::class, 'pendingLeavesReport']);
         Route::get('export', [ReportApiController::class, 'export']);
     });
 });
@@ -122,6 +143,10 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'employee'], function () {
     // WFH Requests
     Route::get('wfh-requests', [EmployeePortalApiController::class, 'wfhRequests']);
     Route::post('wfh-requests', [EmployeePortalApiController::class, 'storeWfhRequest']);
+
+    // Attendance Requests
+    Route::get('attendance-requests', [EmployeeAttendanceRequestApiController::class, 'index']);
+    Route::post('attendance-requests', [EmployeeAttendanceRequestApiController::class, 'store']);
 
     // Profile Settings
     Route::post('change-password', [ProfileApiController::class, 'changePassword']);
