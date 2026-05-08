@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
 
@@ -21,19 +22,9 @@ class Document extends Model
         'expiry_date'
     ];
 
-
-    public function setExpiryDateAttribute($value)
-    {
-        if ($value) {
-            $this->attributes['expiry_date'] = Carbon::createFromFormat('d-m-Y', $value)
-                ->format('Y-m-d');
-        }
-    }
-
-    public function shareWith()
-    {
-        return $this->belongsTo(User::class, 'share_with', 'id');
-    }
+    protected $casts = [
+        'share_with' => 'array',
+    ];
 
     public function party()
     {
@@ -43,5 +34,28 @@ class Document extends Model
     public function folder()
     {
         return $this->belongsTo(Folder::class, 'folder_id', 'id');
+    }
+
+    public function getSharedUsersAttribute()
+    {
+        $ids = $this->share_with ?? [];
+        if (empty($ids)) {
+            return [];
+        }
+
+        return User::whereIn('id', $ids)
+            ->with('employee')
+            ->get(['id', 'username', 'type'])
+            ->map(function ($user) {
+                $name = $user->employee
+                    ? $user->employee->first_name . ' ' . $user->employee->last_name
+                    : $user->username;
+
+                return [
+                    'id' => $user->id,
+                    'name' => trim($name),
+                    'type' => $user->type
+                ];
+            });
     }
 }

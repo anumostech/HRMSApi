@@ -100,7 +100,7 @@ class Employee extends Model
         if ($this->avatar && file_exists(storage_path('app/public/' . $this->avatar))) {
             return asset('storage/' . $this->avatar);
         }
-        return $this->user ? $this->user->avatar_url : 'https://ui-avatars.com/api/?name=' . urlencode($this->first_name) . '&color=6366f1&background=eef2ff';
+        return $this->user ? $this->user->avatar_url : 'https://ui-avatars.com/api/?name=' . urlencode($this->first_name) . '&color=fff&background=2ecc71';
     }
 
     public function attendanceLogs()
