@@ -13,6 +13,11 @@ Route::get('/run-migrations', function () {
     return 'Migration runned successfully';
 });
 
+Route::get('/run-new-migrations', function () {
+    Artisan::call('migrate', ['--force' => true]);
+    return 'Migration runned successfully';
+});
+
 
 Route::get('/run-seeder', function () {
     Artisan::call('db:seed', ['--force' => true]);

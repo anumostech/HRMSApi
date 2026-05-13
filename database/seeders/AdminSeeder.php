@@ -10,12 +10,15 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
+        $role = \App\Models\Role::where('name', 'Admin')->first();
+
         $user = User::create([
             'username' => 'hr@thesay.ae',
             'email' => 'hr@thesay.ae',
             'password' => Hash::make('HR@th3$4y2026'),
             'type' => 'admin',
             'status' => 'active', 
+            'role_id' => $role?->id,
         ]);
 
         $employee = Employee::create([
@@ -25,10 +28,7 @@ class AdminSeeder extends Seeder
             'employee_id' => '1000',
             'company_email' => 'hr@thesay.ae',
             'personal_email' => 'hr@thesay.ae',
-            'total_leaves_allocated' => 0
         ]);
 
-
-        $user->assignRole('Admin');
     }
 }

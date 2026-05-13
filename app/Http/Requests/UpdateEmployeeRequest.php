@@ -81,7 +81,7 @@ class UpdateEmployeeRequest extends FormRequest
             'marital_status' => 'nullable|string|max:255',
             'special_days_name.*' => 'nullable|string|max:255',
             'special_days_date.*' => 'nullable|date',
-            
+
             // Passport
             'passport_full_name' => 'nullable|string|max:255',
             'passport_number' => 'nullable|string|max:255',
@@ -93,7 +93,7 @@ class UpdateEmployeeRequest extends FormRequest
             'mother_name' => 'nullable|string|max:255',
             'address' => 'nullable|string',
 
-             // Documents
+            // Documents
             'passport_1st_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
             'passport_2nd_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
             'passport_outer_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
@@ -125,8 +125,8 @@ class UpdateEmployeeRequest extends FormRequest
             'personal_email' => 'nullable|email|max:255',
             'status' => 'nullable|in:active,inactive',
             'total_leaves_allocated' => 'nullable|integer|min:0',
-            'username' => 'nullable|string|max:255',
-            'password' => 'nullable|string|max:255',
+            // 'username' => 'nullable|string|max:255',
+            // 'password' => 'nullable|string|max:255',
             'type' => 'nullable|in:admin,staff,field_employee,driver,remote_employee',
             'role' => 'nullable|string|max:255',
         ];

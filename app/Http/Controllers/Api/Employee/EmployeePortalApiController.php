@@ -106,7 +106,7 @@ class EmployeePortalApiController extends ApiController
 
         $today = Carbon::today()->toDateString();
 
-        $alreadyPunched = AttendanceLog::where('userid', $employee->id)
+        $alreadyPunched = AttendanceLog::where('userid', $employee->employee_id)
             ->whereDate('log_date', $today)
             ->exists();
 
@@ -116,7 +116,7 @@ class EmployeePortalApiController extends ApiController
 
         $log = AttendanceLog::create([
             'company_id' => $user->company_id ?? 1,
-            'userid' => $employee->id,
+            'userid' => $employee->employee_id,
             'log_date' => $today,
             'punch_in' => Carbon::now(),
             'status' => 1,
@@ -144,7 +144,7 @@ class EmployeePortalApiController extends ApiController
 
         $today = Carbon::today()->toDateString();
 
-        $log = AttendanceLog::where('userid', $employee->id)
+        $log = AttendanceLog::where('userid', $employee->employee_id)
             ->whereDate('log_date', $today)
             ->first();
 
@@ -153,13 +153,14 @@ class EmployeePortalApiController extends ApiController
         if ($log->punch_out)
             return $this->error('Already punched out today.', 400);
 
-        TaskReport::create([
-            'employee_id' => $employee->id,
-            'date' => $today,
-            'tasks_completed' => $request->tasks_completed,
-            'plan_tomorrow' => $request->plan_tomorrow,
-            'remarks' => $request->remarks
-        ]);
+        TaskReport::updateOrCreate(
+            ['employee_id' => $employee->id, 'date' => $today],
+            [
+                'tasks_completed' => $request->tasks_completed,
+                'plan_tomorrow' => $request->plan_tomorrow,
+                'remarks' => $request->remarks
+            ]
+        );
 
         $log->update([
             'punch_out' => Carbon::now(),
@@ -279,7 +280,52 @@ class EmployeePortalApiController extends ApiController
         return $this->success($reports);
     }
 
+    public function showTaskReport($id): JsonResponse
+    {
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
+
+        $report = TaskReport::where('employee_id', $employee->id)->find($id);
+
+        if (!$report) {
+            return $this->error('Task report not found', 404);
+        }
+
+        return $this->success($report);
+    }
+
     public function storeTaskReport(Request $request): JsonResponse
+    {
+        $request->validate([
+            'tasks_completed' => 'required|string',
+            'plan_tomorrow' => 'required|string',
+            'remarks' => 'nullable|string',
+            'date' => 'nullable|date'
+        ]);
+
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
+
+        $date = $request->date ?? Carbon::today()->toDateString();
+
+        // Check if report already exists for this date
+        $report = TaskReport::updateOrCreate(
+            ['employee_id' => $employee->id, 'date' => $date],
+            [
+                'tasks_completed' => $request->tasks_completed,
+                'plan_tomorrow' => $request->plan_tomorrow,
+                'remarks' => $request->remarks
+            ]
+        );
+
+        return $this->success($report, 'Task report saved successfully', $report->wasRecentlyCreated ? 201 : 200);
+    }
+
+    public function updateTaskReport(Request $request, $id): JsonResponse
     {
         $request->validate([
             'tasks_completed' => 'required|string',
@@ -292,12 +338,33 @@ class EmployeePortalApiController extends ApiController
         if (!$employee)
             return $this->error('Employee profile not found', 404);
 
-        $report = TaskReport::create(array_merge($request->all(), [
-            'employee_id' => $employee->id,
-            'date' => Carbon::now()
-        ]));
+        $report = TaskReport::where('employee_id', $employee->id)->find($id);
 
-        return $this->success($report, 'Task report submitted successfully', 201);
+        if (!$report) {
+            return $this->error('Task report not found', 404);
+        }
+
+        $report->update($request->only(['tasks_completed', 'plan_tomorrow', 'remarks']));
+
+        return $this->success($report, 'Task report updated successfully');
+    }
+
+    public function destroyTaskReport($id): JsonResponse
+    {
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
+
+        $report = TaskReport::where('employee_id', $employee->id)->find($id);
+
+        if (!$report) {
+            return $this->error('Task report not found', 404);
+        }
+
+        $report->delete();
+
+        return $this->success(null, 'Task report deleted successfully');
     }
 
     /**
@@ -312,6 +379,21 @@ class EmployeePortalApiController extends ApiController
 
         $requests = WfhRequest::where('employee_id', $employee->id)->latest()->get();
         return $this->success($requests);
+    }
+
+    public function showWfhRequest($id): JsonResponse
+    {
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
+
+        $request = WfhRequest::where('employee_id', $employee->id)->find($id);
+        if (!$request) {
+            return $this->error('WFH request not found', 404);
+        }
+
+        return $this->success($request);
     }
 
     public function storeWfhRequest(Request $request): JsonResponse
@@ -345,5 +427,55 @@ class EmployeePortalApiController extends ApiController
         ]);
 
         return $this->success($wfh, 'WFH request submitted successfully', 201);
+    }
+
+    public function updateWfhRequest(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'date' => 'required|date',
+            'reason' => 'required|string',
+            'notes' => 'nullable|string'
+        ]);
+
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
+
+        $wfh = WfhRequest::where('employee_id', $employee->id)->find($id);
+
+        if (!$wfh) {
+            return $this->error('WFH request not found', 404);
+        }
+
+        if ($wfh->status !== 'pending') {
+            return $this->error('Only pending requests can be updated.', 400);
+        }
+
+        $wfh->update($request->only(['date', 'reason', 'notes']));
+
+        return $this->success($wfh, 'WFH request updated successfully');
+    }
+
+    public function destroyWfhRequest($id): JsonResponse
+    {
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
+
+        $wfh = WfhRequest::where('employee_id', $employee->id)->find($id);
+
+        if (!$wfh) {
+            return $this->error('WFH request not found', 404);
+        }
+
+        if ($wfh->status !== 'pending') {
+            return $this->error('Only pending requests can be deleted.', 400);
+        }
+
+        $wfh->delete();
+
+        return $this->success(null, 'WFH request deleted successfully');
     }
 }
