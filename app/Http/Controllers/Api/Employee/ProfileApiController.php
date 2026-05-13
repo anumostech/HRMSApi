@@ -37,7 +37,7 @@ class ProfileApiController extends ApiController
             'password' => Hash::make($request->password),
         ]);
 
-        return $this->success(null, 'Password updated successfully.');
+        return $this->success($user, 'Password updated successfully.');
     }
 
     /**
@@ -46,14 +46,16 @@ class ProfileApiController extends ApiController
     public function updateProfile(Request $request): JsonResponse
     {
         $user = auth('api')->user();
-        if (!$user) return $this->error('Unauthorized', 401);
+        if (!$user)
+            return $this->error('Unauthorized', 401);
 
         $request->validate([
             'username' => 'nullable|string|max:255|unique:users,username,' . $user->id,
+            'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
             'avatar' => 'nullable|image|max:2048',
         ]);
 
-        $data = $request->only('username');
+        $data = $request->only('username', 'email');
 
         if ($request->hasFile('avatar')) {
             // Delete old avatar if exists

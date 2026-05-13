@@ -10,12 +10,12 @@ use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Permission\Traits\HasRoles;
+
 
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $guard_name = 'api';
 
@@ -53,6 +53,7 @@ class User extends Authenticatable implements JWTSubject
         'company_id',
         'department_id',
         'designation_id',
+        'role_id',
         'type',
         'status',
     ];
@@ -85,7 +86,37 @@ class User extends Authenticatable implements JWTSubject
         if ($this->avatar && file_exists(storage_path('app/public/' . $this->avatar))) {
             return asset('storage/' . $this->avatar);
         }
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->username) . '&color=6366f1&background=eef2ff';
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->username) . '&color=fff&background=2ecc71';
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function hasPermission($moduleSlug, $permissionType)
+    {
+        if (!$this->role) {
+            return false;
+        }
+
+        // Admin has all permissions
+        if ($this->role->name === 'Admin') {
+            return true;
+        }
+
+        $permission = $this->role->permissions()
+            ->whereHas('module', function ($query) use ($moduleSlug) {
+                $query->where('slug', $moduleSlug);
+            })
+            ->first();
+
+        if (!$permission) {
+            return false;
+        }
+
+        $column = 'can_' . $permissionType;
+        return (bool) $permission->$column;
     }
 
     public function employee()

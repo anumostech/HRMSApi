@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 
 class AttendanceApiController extends ApiController
@@ -95,28 +96,28 @@ class AttendanceApiController extends ApiController
 
             // Save in DB
             $upload = AttendanceUpload::create([
-                'file_path' => $path, // e.g. attendance/xyz.txt
-                // 'company_id' => $request->company_id,
+                'file_path' => $path,
                 'status' => 'pending',
                 'progress' => 0
             ]);
 
-            // Dispatch job
-            ProcessAttendanceJob::dispatch($upload->id);
+            $extension = $file->getClientOriginalExtension();
 
-            return response()->json([
-                'upload_id' => $upload->id,
-                'status' => 'pending',
-                'file_path' => $path
-            ]);
+            if (in_array($extension, ['xlsx', 'csv'])) {
+                // Direct import for Excel/CSV
+                Excel::import(new \App\Imports\AttendanceImport($upload->id), $path, 'private');
+                $upload->update(['status' => 'completed', 'progress' => 100]);
 
+                return $this->success($upload, 'Attendance imported successfully');
+            } else {
+                // Dispatch background job for .dat/.txt
+                ProcessAttendanceJob::dispatch($upload->id);
+
+                return $this->success($upload, 'Attendance file uploaded and processing started');
+            }
         } catch (\Exception $e) {
             Log::error('Upload Error: ' . $e->getMessage());
-
-            return response()->json([
-                'message' => 'Upload failed',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->error('Upload failed: ' . $e->getMessage(), 500);
         }
     }
 
