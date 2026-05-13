@@ -20,7 +20,7 @@ class ForgotPasswordApiController extends ApiController
         $request->validate(['email' => 'required|email|exists:users,email']);
 
         $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
-        
+
         // Store code in password_reset_tokens table
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $request->email],

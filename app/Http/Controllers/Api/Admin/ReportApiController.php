@@ -16,8 +16,11 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
+use App\Models\TaskReport;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 class ReportApiController extends ApiController
 {
@@ -295,155 +298,179 @@ class ReportApiController extends ApiController
     /**
      * Export Report
      */
+    /**
+     * Main Export Dispatcher
+     */
     public function export(Request $request)
     {
+        $this->authenticateFromToken($request);
+
         $reportType = $request->get('report_type');
+
+        return match ($reportType) {
+            'attendance' => $this->attendanceExport($request),
+            'leave'      => $this->leaveExport($request),
+            'employee'   => $this->employeeExport($request),
+            'task_report' => $this->taskReportExport($request),
+            default      => $this->error('Invalid report type', 400),
+        };
+    }
+
+    public function attendanceExport(Request $request)
+    {
+        $this->authenticateFromToken($request);
         $dateRange = $request->get('date_range', 'today');
         $employeeId = $request->get('employee_id');
         $departmentId = $request->get('department_id');
-        $format = strtolower($request->get('format', 'csv'));
 
-        list($startDate, $endDate) = $this->getDateRange(
-            $dateRange,
-            $request->get('from_date'),
-            $request->get('to_date')
-        );
+        list($startDate, $endDate) = $this->getDateRange($dateRange, $request->get('from_date'), $request->get('to_date'));
+
+        $empQuery = Employee::with(['user.department'])->whereRelation('user', 'status', 'active');
+        if ($employeeId && $employeeId !== 'all') $empQuery->where('employee_id', $employeeId);
+        if ($departmentId && $departmentId !== 'all') $empQuery->whereRelation('user', 'department_id', $departmentId);
+
+        $employees = $empQuery->get();
+        $employeeIds = $employees->pluck('employee_id')->toArray();
+
+        $allLogs = AttendanceLog::whereBetween('log_date', [$startDate, $endDate])
+            ->whereIn('userid', $employeeIds)
+            ->get()
+            ->groupBy(['log_date', 'userid']);
 
         $data = [];
-        $columns = [];
+        $tempDate = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
 
-        switch ($reportType) {
-            case 'attendance':
-                $columns = ['Date', 'Employee ID', 'Name', 'Department', 'Punch In', 'Punch Out', 'Status'];
-
-                $empQuery = Employee::with(['user.department'])
-                    ->whereRelation('user', 'status', 'active'); // Corrected here
-
-                if ($employeeId && $employeeId !== 'all') {
-                    $empQuery->where('employee_id', $employeeId);
+        while ($tempDate <= $end) {
+            $dateStr = $tempDate->toDateString();
+            $dayLogs = $allLogs->get($dateStr, collect());
+            foreach ($employees as $emp) {
+                $empLogs = $dayLogs->get($emp->employee_id);
+                $punchIn = $empLogs ? $empLogs->min('punch_in') : null;
+                $punchOut = $empLogs ? $empLogs->max('punch_out') : null;
+                $status = 'Absent';
+                if ($punchIn) {
+                    $time = Carbon::parse($punchIn)->format('H:i:s');
+                    $status = ($time > '08:10:59' && $time <= '12:00:00') ? 'Late' : 'Present';
                 }
-
-                if ($departmentId && $departmentId !== 'all') {
-                    $empQuery->whereRelation('user', 'department_id', $departmentId);
-                }
-
-                $employees = $empQuery->get();
-                $employeeIds = $employees->pluck('employee_id')->toArray();
-
-                $allLogs = AttendanceLog::whereBetween('log_date', [$startDate, $endDate])
-                    ->whereIn('userid', $employeeIds)
-                    ->get()
-                    ->groupBy(['log_date', 'userid']);
-
-                $tempDate = Carbon::parse($startDate);
-                $end = Carbon::parse($endDate);
-
-                while ($tempDate <= $end) {
-                    $dateStr = $tempDate->toDateString();
-                    $dayLogs = $allLogs->get($dateStr, collect());
-
-                    foreach ($employees as $emp) {
-                        $empLogs = $dayLogs->get($emp->employee_id);
-                        $punchIn = $empLogs ? $empLogs->min('punch_in') : null;
-                        $punchOut = $empLogs ? $empLogs->max('punch_out') : null;
-                        $status = 'Absent';
-                        if ($punchIn) {
-                            $time = Carbon::parse($punchIn)->format('H:i:s');
-                            $status = ($time > '08:10:59' && $time <= '12:00:00') ? 'Late' : 'Present';
-                        }
-
-                        $data[] = [
-                            $dateStr,
-                            $emp->employee_id,
-                            $emp->first_name . ' ' . $emp->last_name,
-                            $emp->user->department->name ?? 'N/A',
-                            $punchIn ? Carbon::parse($punchIn)->format('H:i') : '-',
-                            $punchOut ? Carbon::parse($punchOut)->format('H:i') : '-',
-                            $status
-                        ];
-                    }
-
-                    $tempDate->addDay();
-                }
-                break;
-
-            case 'leave':
-                $columns = ['Employee ID', 'Name', 'Leave Type', 'From', 'To', 'Days', 'Status', 'Reason'];
-                $leaveQuery = LeaveRequest::with(['employee.user', 'leaveType'])
-                    ->where(function ($q) use ($startDate, $endDate) {
-                        $q->whereBetween('start_date', [$startDate, $endDate])
-                            ->orWhereBetween('end_date', [$startDate, $endDate]);
-                    });
-
-                if ($employeeId && $employeeId !== 'all') {
-                    $leaveQuery->whereHas('employee', fn($q) => $q->where('employee_id', $employeeId));
-                }
-
-                if ($departmentId && $departmentId !== 'all') {
-                    $leaveQuery->whereHas('employee.user', fn($q) => $q->where('department_id', $departmentId));
-                }
-
-                $leaves = $leaveQuery->get();
-
-                foreach ($leaves as $leave) {
-                    $data[] = [
-                        $leave->employee->employee_id ?? 'N/A',
-                        ($leave->employee->first_name ?? '') . ' ' . ($leave->employee->last_name ?? ''),
-                        $leave->leaveType->name ?? 'N/A',
-                        $leave->start_date->toDateString(),
-                        $leave->end_date->toDateString(),
-                        $leave->duration_days,
-                        ucfirst($leave->status),
-                        $leave->reason
-                    ];
-                }
-                break;
-
-            case 'employee':
-                $columns = ['Employee ID', 'Name', 'Company', 'Department', 'Designation', 'Joining Date', 'Status'];
-                $empQuery = Employee::with(['user.company', 'user.department', 'user.designation'])
-                    ->whereRelation('user', 'status', 'active'); // Corrected here
-
-                if ($departmentId && $departmentId !== 'all') {
-                    $empQuery->whereRelation('user', 'department_id', $departmentId);
-                }
-
-                $employees = $empQuery->get();
-
-                foreach ($employees as $emp) {
-                    $data[] = [
-                        $emp->employee_id,
-                        $emp->first_name . ' ' . $emp->last_name,
-                        $emp->user->company->name ?? 'N/A',
-                        $emp->user->department->name ?? 'N/A',
-                        $emp->user->designation->name ?? 'N/A',
-                        $emp->joining_date,
-                        ucfirst($emp->user->status) // Corrected here
-                    ];
-                }
-                break;
+                $data[] = [$dateStr, $emp->employee_id, $emp->first_name . ' ' . $emp->last_name, $emp->user->department->name ?? 'N/A', $punchIn ? Carbon::parse($punchIn)->format('H:i') : '-', $punchOut ? Carbon::parse($punchOut)->format('H:i') : '-', $status];
+            }
+            $tempDate->addDay();
         }
 
-        $filename  = "report_{$reportType}_" . now()->format('YmdHis');
+        return $this->downloadResponse(new AttendanceExport($data), "attendance_report", $request->get('format'));
+    }
 
-        // Build the appropriate Export class
-        $exportClass = match ($reportType) {
-            'attendance' => new AttendanceExport($data),
-            'leave'      => new LeaveExport($data),
-            'employee'   => new EmployeeExport($data),
-            default      => null,
+    public function leaveExport(Request $request)
+    {
+        $this->authenticateFromToken($request);
+        $dateRange = $request->get('date_range', 'this_month');
+        $employeeId = $request->get('employee_id');
+        $departmentId = $request->get('department_id');
+
+        list($startDate, $endDate) = $this->getDateRange($dateRange, $request->get('from_date'), $request->get('to_date'));
+
+        $query = LeaveRequest::with(['employee.user', 'leaveType'])
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('start_date', [$startDate, $endDate])->orWhereBetween('end_date', [$startDate, $endDate]);
+            });
+
+        if ($employeeId && $employeeId !== 'all') $query->whereHas('employee', fn($q) => $q->where('employee_id', $employeeId));
+        if ($departmentId && $departmentId !== 'all') $query->whereHas('employee.user', fn($q) => $q->where('department_id', $departmentId));
+
+        $data = [];
+        foreach ($query->get() as $leave) {
+            $data[] = [$leave->employee->employee_id ?? 'N/A', ($leave->employee->first_name ?? '') . ' ' . ($leave->employee->last_name ?? ''), $leave->leaveType->name ?? 'N/A', $leave->start_date->toDateString(), $leave->end_date->toDateString(), $leave->duration_days, ucfirst($leave->status), $leave->reason];
+        }
+
+        return $this->downloadResponse(new LeaveExport($data), "leave_report", $request->get('format'));
+    }
+
+    public function employeeExport(Request $request)
+    {
+        $this->authenticateFromToken($request);
+        $departmentId = $request->get('department_id');
+        $companyId = $request->get('company_id');
+
+        $query = Employee::with(['user.company', 'user.department', 'user.designation'])->whereRelation('user', 'status', 'active');
+        if ($departmentId && $departmentId !== 'all') $query->whereRelation('user', 'department_id', $departmentId);
+        if ($companyId && $companyId !== 'all') $query->whereHas('user', fn($q) => $q->where('company_id', $companyId));
+
+        $data = [];
+        foreach ($query->get() as $emp) {
+            $data[] = [$emp->employee_id, $emp->first_name . ' ' . $emp->last_name, $emp->user->company->name ?? 'N/A', $emp->user->department->name ?? 'N/A', $emp->user->designation->name ?? 'N/A', $emp->joining_date, ucfirst($emp->user->status)];
+        }
+
+        return $this->downloadResponse(new EmployeeExport($data), "employee_report", $request->get('format'));
+    }
+
+    public function taskReportExport(Request $request)
+    {
+        $this->authenticateFromToken($request);
+        $dateRange = $request->get('date_range', 'today');
+        $employeeId = $request->get('employee_id');
+
+        list($startDate, $endDate) = $this->getDateRange($dateRange, $request->get('from_date'), $request->get('to_date'));
+
+        $taskQuery = TaskReport::with(['employee.user'])->whereBetween('date', [$startDate, $endDate]);
+        if ($employeeId && $employeeId !== 'all') $taskQuery->where('employee_id', $employeeId);
+
+        $data = [];
+        $columns = ['Date', 'Employee ID', 'Name', 'Tasks Completed', 'Plan for Tomorrow', 'Remarks'];
+        foreach ($taskQuery->latest('date')->get() as $report) {
+            $data[] = [$report->date, $report->employee->employee_id ?? 'N/A', ($report->employee->first_name ?? '') . ' ' . ($report->employee->last_name ?? ''), $report->tasks_completed, $report->plan_tomorrow, $report->remarks];
+        }
+
+        return $this->downloadResponse(new \App\Exports\GenericExport($data, $columns), "task_report", $request->get('format'));
+    }
+
+    /**
+     * Helper: Handle authentication via query token for downloads
+     */
+    private function authenticateFromToken(Request $request)
+    {
+        if (!$request->bearerToken() && $request->has('token')) {
+            try {
+                $user = auth('api')->setToken($request->token)->user();
+                if ($user) {
+                    auth('api')->setUser($user);
+                }
+            } catch (\Exception $e) {
+                // Fail silently or handle
+            }
+        }
+
+        if (!auth('api')->check()) {
+            abort(403, 'Forbidden - Access denied. Please provide a valid token.');
+        }
+    }
+
+    /**
+     * Helper: Centralized download response handler
+     */
+    private function downloadResponse($exportClass, $baseFilename, $format)
+    {
+        $filename = $baseFilename . "_" . now()->format('YmdHis');
+        $format = strtolower($format);
+
+        if ($format === 'pdf') {
+            $data = method_exists($exportClass, 'array') ? $exportClass->array() : (method_exists($exportClass, 'collection') ? $exportClass->collection()->toArray() : []);
+            $headings = method_exists($exportClass, 'headings') ? $exportClass->headings() : [];
+            $title = method_exists($exportClass, 'title') ? $exportClass->title() : str_replace('_', ' ', ucfirst($baseFilename));
+
+            $pdf = Pdf::loadView('reports.generic_pdf', [
+                'data' => $data,
+                'headings' => $headings,
+                'title' => $title
+            ]);
+
+            return $pdf->download($filename . '.pdf');
+        }
+
+        return match ($format) {
+            'xlsx' => Excel::download($exportClass, $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX),
+            default => Excel::download($exportClass, $filename . '.csv', \Maatwebsite\Excel\Excel::CSV),
         };
-
-        if (!$exportClass) {
-            return $this->error('Invalid report type', 400);
-        }
-
-        if ($format === 'excel') {
-            return Excel::download($exportClass, $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX);
-        }
-
-        // Default: CSV via maatwebsite/excel
-        return Excel::download($exportClass, $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
     }
 
     /**

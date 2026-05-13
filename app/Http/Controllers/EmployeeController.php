@@ -115,7 +115,10 @@ class EmployeeController extends Controller
         ]);
 
         // Assign Role
-        $user->assignRole('Employee');
+        $role = \App\Models\Role::where('name', 'Employee')->first();
+        if ($role) {
+            $user->update(['role_id' => $role->id]);
+        }
 
         // 2. Create Employee linked to User
         $data['user_id'] = $user->id;

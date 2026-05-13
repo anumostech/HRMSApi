@@ -11,12 +11,15 @@ class EmployeeSeeder extends Seeder
 {
     public function run(): void
     {
+        $role = \App\Models\Role::where('name', 'Employee')->first();
+
         $user = User::create([
             'username' => 'jithin@thesay.ae',
             'email' => 'jithin@thesay.ae',
             'password' => Hash::make('jithin@thesay'),
             'type' => 'employee',
             'status' => 'active',
+            'role_id' => $role?->id,
         ]);
 
         Employee::create([
@@ -28,9 +31,6 @@ class EmployeeSeeder extends Seeder
             'personal_email' => 'jithin@thesay.ae',
             'personal_number' => '9876543210',
             'joining_date' => now(),
-            'total_leaves_allocated' => 24,
         ]);
-
-        $user->assignRole('Employee');
     }
 }

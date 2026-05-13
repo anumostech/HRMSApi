@@ -15,7 +15,7 @@ class LoginController extends ApiController
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required', 
+            'username' => 'required',
             'password' => 'required|string|min:6',
         ]);
 
@@ -27,10 +27,12 @@ class LoginController extends ApiController
             ? 'email'
             : 'username';
 
-        if (!$token = auth('api')->attempt([
-            $loginField => $request->username,
-            'password' => $request->password
-        ])) {
+        if (
+            !$token = auth('api')->attempt([
+                $loginField => $request->username,
+                'password' => $request->password
+            ])
+        ) {
             return $this->error('Unauthorized - Invalid credentials', 401);
         }
 
@@ -50,6 +52,7 @@ class LoginController extends ApiController
     protected function respondWithToken($token, $user): JsonResponse
     {
         $employee = $user->employee;
+        $role = $user->role;
 
         return $this->success([
             'access_token' => $token,
@@ -57,35 +60,23 @@ class LoginController extends ApiController
             'expires_in' => auth('api')->factory()->getTTL() * 60,
 
             'user' => [
-                // 🔹 User table data
                 'id' => $user->id,
                 'username' => $user->username,
                 'email' => $user->email,
-                'type' => $user->type,
                 'status' => $user->status,
-
-                // 🔹 Employee table data
+                'avatar' => $user->avatar_url,
+                'type' => $user->type,
+                'role' => $role ? [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                ] : null,
                 'employee' => $employee ? [
                     'id' => $employee->id,
                     'name' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')),
                     'employee_id' => $employee->employee_id,
-                    'company_email' => $employee->company_email,
-                    'phone' => $employee->personal_number,
-                    'joining_date' => $employee->joining_date,
                 ] : null,
-
-                // 🔹 Relations
-                'organization_id' => $user->organization_id,
-                'company_id' => $user->company_id,
-                'department_id' => $user->department_id,
-                'designation_id' => $user->designation_id,
-
-                // 🔹 Avatar
-                'avatar' => $user->avatar_url,
-
-                // 🔹 Roles & Permissions (Spatie)
-                'roles' => $user->getRoleNames(),
-                'permissions' => $user->getAllPermissions()->pluck('name'),
+                'permissions' => $this->formatPermissions($user),
+                'sidebar_modules' => $this->formatSidebarModules($user),
             ]
         ], 'Login successful');
     }
@@ -109,7 +100,59 @@ class LoginController extends ApiController
         }
 
         $user = auth('api')->user();
-
         return $this->respondWithToken(null, $user);
+    }
+
+    public function getMyPermissions(): JsonResponse
+    {
+        $user = auth('api')->user();
+        return $this->success($this->formatPermissions($user));
+    }
+
+    public function getMySidebarModules(): JsonResponse
+    {
+        $user = auth('api')->user();
+        return $this->success($this->formatSidebarModules($user));
+    }
+
+    protected function formatPermissions($user)
+    {
+        if (!$user->role)
+            return [];
+
+        if ($user->role->name === 'Admin') {
+            return ['all' => true];
+        }
+
+        return $user->role->permissions->mapWithKeys(function ($p) {
+            return [
+                $p->module->slug => [
+                    'read' => (bool) $p->can_read,
+                    'edit' => (bool) $p->can_edit,
+                    'delete' => (bool) $p->can_delete,
+                ]
+            ];
+        });
+    }
+
+    protected function formatSidebarModules($user)
+    {
+        if (!$user->role)
+            return [];
+
+        if ($user->role->name === 'Admin') {
+            return \App\Models\Module::where('status', 'active')->get();
+        }
+
+        return $user->role->permissions()
+            ->where('can_read', true)
+            ->with([
+                'module' => function ($q) {
+                    $q->where('status', 'active');
+                }
+            ])
+            ->get()
+            ->pluck('module')
+            ->filter();
     }
 }

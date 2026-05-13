@@ -105,7 +105,7 @@ class Employee extends Model
 
     public function attendanceLogs()
     {
-        return $this->hasMany(AttendanceLog::class, 'userid', 'id');
+        return $this->hasMany(AttendanceLog::class, 'userid', 'employee_id');
     }
 
     public function leaveRequests()

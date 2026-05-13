@@ -39,9 +39,29 @@ class WfhApiController extends ApiController
 
         $wfhRequest->update([
             'status' => $request->status,
-            'notes' => $request->admin_notes ?? $wfhRequest->notes // Or maybe add an admin_notes column? 
+            'notes' => $request->admin_notes ?? $wfhRequest->notes
         ]);
 
         return $this->success($wfhRequest->load('employee.user'), "WFH request {$request->status} successfully.");
+    }
+
+    public function update(Request $request, WfhRequest $wfhRequest): JsonResponse
+    {
+        $request->validate([
+            'date' => 'required|date',
+            'reason' => 'required|string',
+            'notes' => 'nullable|string',
+            'status' => 'required|in:pending,Approved,Rejected'
+        ]);
+
+        $wfhRequest->update($request->all());
+
+        return $this->success($wfhRequest->load('employee.user'), 'WFH request updated successfully');
+    }
+
+    public function destroy(WfhRequest $wfhRequest): JsonResponse
+    {
+        $wfhRequest->delete();
+        return $this->success(null, 'WFH request deleted successfully');
     }
 }

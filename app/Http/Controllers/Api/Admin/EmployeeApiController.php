@@ -58,13 +58,16 @@ class EmployeeApiController extends ApiController
 
         // Assign Role
         $roleName = $data['role'] ?? 'Employee';
-        $user->assignRole($roleName);
+        $role = \App\Models\Role::where('name', $roleName)->first();
+        if ($role) {
+            $user->update(['role_id' => $role->id]);
+        }
 
         // 2. Create Employee linked to User
         $data['user_id'] = $user->id;
 
         // Remove fields that are now on User table
-        unset($data['organization_id'], $data['company_id'], $data['department_id'], $data['designation_id'], $data['password'], $data['status'], $data['type']);
+        unset($data['organization_id'], $data['company_id'], $data['department_id'], $data['designation_id'], $data['status'], $data['type']);
 
         $employee = Employee::create($data);
 
@@ -125,7 +128,10 @@ class EmployeeApiController extends ApiController
 
             // Update role if provided
             if (isset($data['role'])) {
-                $employee->user->syncRoles([$data['role']]);
+                $role = \App\Models\Role::where('name', $data['role'])->first();
+                if ($role) {
+                    $employee->user->update(['role_id' => $role->id]);
+                }
             }
         }
 
