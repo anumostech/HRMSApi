@@ -23,6 +23,9 @@ use App\Http\Controllers\Api\Employee\EmployeePortalApiController;
 use App\Http\Controllers\Api\Employee\ProfileApiController;
 use App\Http\Controllers\Api\Employee\AttendanceRequestApiController as EmployeeAttendanceRequestApiController;
 use App\Http\Controllers\Api\Admin\FileApiController;
+use App\Http\Controllers\Api\Admin\RoleApiController;
+use App\Http\Controllers\Api\Admin\ModuleApiController;
+use App\Http\Controllers\Api\Admin\UserApiController;
 
 
 /*
@@ -46,15 +49,15 @@ Route::group(['prefix' => 'auth'], function () {
 // RBAC Management Routes
 Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     // Roles
-    Route::apiResource('roles', \App\Http\Controllers\Api\Admin\RoleApiController::class);
-    Route::get('roles/{role}/permissions', [\App\Http\Controllers\Api\Admin\RoleApiController::class, 'getPermissions']);
-    Route::post('roles/{role}/permissions', [\App\Http\Controllers\Api\Admin\RoleApiController::class, 'updatePermissions']);
+    Route::apiResource('roles', RoleApiController::class);
+    Route::get('roles/{role}/permissions', [RoleApiController::class, 'getPermissions']);
+    Route::post('roles/{role}/permissions', [RoleApiController::class, 'updatePermissions']);
 
     // Modules
-    Route::apiResource('modules', \App\Http\Controllers\Api\Admin\ModuleApiController::class);
+    Route::apiResource('modules', ModuleApiController::class);
 
     // Users
-    Route::apiResource('users', \App\Http\Controllers\Api\Admin\UserApiController::class);
+    Route::apiResource('users', UserApiController::class);
 });
 
 Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
