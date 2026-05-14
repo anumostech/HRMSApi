@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\PermissionMiddleware;
+use App\Http\Middleware\EnsureEmployeeAuthenticated;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,8 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'employee.auth' => \App\Http\Middleware\EnsureEmployeeAuthenticated::class,
-            'permission' => \App\Http\Middleware\PermissionMiddleware::class,
+            'employee.auth' => EnsureEmployeeAuthenticated::class,
+            'permission' => PermissionMiddleware::class,
         ]);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {

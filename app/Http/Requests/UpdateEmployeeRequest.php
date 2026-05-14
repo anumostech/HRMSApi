@@ -125,9 +125,9 @@ class UpdateEmployeeRequest extends FormRequest
             'personal_email' => 'nullable|email|max:255',
             'status' => 'nullable|in:active,inactive',
             'total_leaves_allocated' => 'nullable|integer|min:0',
-            // 'username' => 'nullable|string|max:255',
+            'username' => 'nullable|string|max:255',
             // 'password' => 'nullable|string|max:255',
-            'type' => 'nullable|in:admin,staff,field_employee,driver,remote_employee',
+            'type' => 'nullable|in:admin,employee',
             'role' => 'nullable|string|max:255',
         ];
     }
