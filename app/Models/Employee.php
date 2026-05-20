@@ -82,8 +82,9 @@ class Employee extends Model
         'personal_email',
         'home_country_id_proof',
         'status',
-        'total_leaves_allocated',
         'avatar',
+        'marital_status',
+        'nationality'
     ];
 
     protected $casts = [
@@ -111,5 +112,10 @@ class Employee extends Model
     public function leaveRequests()
     {
         return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function leaveAllocations()
+    {
+        return $this->hasMany(LeaveAllocation::class);
     }
 }

@@ -12,4 +12,9 @@ class LeaveType extends Model
     {
         return $this->hasMany(LeaveRequest::class);
     }
+
+    public function leaveAllocations()
+    {
+        return $this->hasMany(LeaveAllocation::class);
+    }
 }
