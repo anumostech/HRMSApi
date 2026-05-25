@@ -42,11 +42,13 @@ class EmployeeApiController extends ApiController
         $data = $this->handleDocuments($data);
         $data = $this->handleSpecialDays($request, $data);
 
+        $userEmail = $data['company_email'] ?? $data['personal_email'];
+
         // 1. Create User
         $randomPassword = Str::random(10);
         $user = User::create([
-            'username' => $data['company_email'],
-            'email' => $data['company_email'],
+            'username' => $userEmail,
+            'email' => $userEmail,
             'password' => Hash::make($randomPassword),
             'organization_id' => $data['organization_id'] ?? 1,
             'company_id' => $data['company_id'],
@@ -99,14 +101,15 @@ class EmployeeApiController extends ApiController
         $data = $request->validated();
         $data = $this->handleDocuments($data);
         $data = $this->handleSpecialDays($request, $data);
+        $userEmail = $data['company_email'] ?? $data['personal_email'];
 
         // Update User part if User exists
         if ($employee->user) {
             $userData = [];
             if (isset($data['username']))
-                $userData['username'] = $data['username'];
+                $userData['username'] = $userEmail;
             if (isset($data['company_email']))
-                $userData['email'] = $data['company_email'];
+                $userData['email'] = $userEmail;
             if (!empty($data['password']))
                 $userData['password'] = Hash::make($data['password']);
             if (isset($data['organization_id']))
@@ -147,8 +150,11 @@ class EmployeeApiController extends ApiController
 
     public function destroy(Employee $employee): JsonResponse
     {
+        if ($employee->user) {
+            $employee->user->delete();
+        }
         $employee->delete();
-        return $this->success(null, 'Employee deleted successfully');
+        return $this->success(null, 'User deleted successfully');
     }
 
     public function updateStatus(Request $request, Employee $employee): JsonResponse
@@ -171,17 +177,50 @@ class EmployeeApiController extends ApiController
             'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120'
         ]);
 
-        $file = $request->file('file');
+        try {
+            $file = $request->file('file');
 
-        $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            // ✅ Check file is valid
+            if (!$file->isValid()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid file upload'
+                ], 400);
+            }
 
-        $path = $file->storeAs('temp', $fileName, 'public');
+            $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
 
-        return response()->json([
-            'status' => true,
-            'path' => $path,
-            'url'  => Storage::disk('public')->url($path)
-        ]);
+            // ✅ Make sure temp directory exists
+            if (!Storage::disk('public')->exists('temp')) {
+                Storage::disk('public')->makeDirectory('temp');
+            }
+
+            // ✅ Store file explicitly
+            $path = Storage::disk('public')->putFileAs(
+                'temp',       // folder
+                $file,        // file
+                $fileName     // filename
+            );
+
+            if (!$path) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'File storage failed'
+                ], 500);
+            }
+
+            return response()->json([
+                'status' => true,
+                'path' => $path,
+                'url' => Storage::disk('public')->url($path)
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     private function handleDocuments(array $data): array

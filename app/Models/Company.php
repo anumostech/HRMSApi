@@ -16,7 +16,12 @@ class Company extends Model
         'phone',
         'email',
         'logo',
-        'address'
+        'address',
+        'trade_license'
+    ];
+
+    protected $casts = [
+        'trade_license' => 'string'
     ];
 
     public function organization()

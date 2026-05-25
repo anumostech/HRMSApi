@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('logo')->nullable();
             $table->text('address')->nullable();
+            $table->string('trade_license')->nullable();
             $table->timestamps();
             $table->integer('created_by')->nullable();
             $table->integer('deleted_by')->nullable();
