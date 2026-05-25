@@ -61,7 +61,7 @@ class DocumentApiController extends ApiController
             'name' => 'required|string|max:255',
             'type' => 'required|in:organization,agreements,hr,others',
             'description' => 'nullable|string',
-            'file_path' => 'sometimes|nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'file_path' => 'sometimes|nullable|string|starts_with:temp/',
             'folder_id' => 'required|exists:folders,id',
             'party_id' => 'nullable|exists:parties,id',
             'share_with' => 'nullable|array',
@@ -71,8 +71,7 @@ class DocumentApiController extends ApiController
         $folder_id = $request->folder_id;
         $folder = Folder::find($folder_id);
         $folder_name = $folder->name;
-        $file = $request->file('file_path');
-        $tempPath = $file->store('temp', 'public');
+        $tempPath = $request->file_path;
 
         // Ensure temporary file exists
         if (!Storage::disk('public')->exists($tempPath)) {
@@ -110,25 +109,63 @@ class DocumentApiController extends ApiController
             'name' => 'required|string|max:255',
             'type' => 'required|in:organization,agreements,hr,others',
             'description' => 'nullable|string',
-            'file_path' => 'sometimes|nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'file_path' => 'sometimes|nullable|string|starts_with:temp/',
             'folder_id' => 'required|exists:folders,id',
             'party_id' => 'nullable|exists:parties,id',
             'share_with' => 'nullable|array',
             'expiry_date' => 'nullable|date|after:today'
         ]);
 
-        $document->update($request->only([
+        $data = $request->only([
             'name',
             'type',
             'description',
             'party_id',
-            'file_path',
             'folder_id',
             'share_with',
             'expiry_date'
-        ]));
+        ]);
 
-        return $this->success($document, 'Document context updated successfully');
+        // Handle file update
+        if ($request->filled('file_path')) {
+
+            $tempPath = $request->file_path;
+
+            // Check temp file exists
+            if (!Storage::disk('public')->exists($tempPath)) {
+                return $this->error('Temporary file not found', 404);
+            }
+
+            // Delete old file
+            if ($document->file_path &&
+                Storage::disk('public')->exists($document->file_path)) {
+
+                Storage::disk('public')->delete($document->file_path);
+            }
+
+            // Get folder
+            $folder = Folder::find($request->folder_id);
+
+            $folderName = $folder->name;
+
+            // Create new path
+            $filename = basename($tempPath);
+
+            $newPath = 'documents/' . $folderName . '/' . $filename;
+
+            // Move new file
+            Storage::disk('public')->move($tempPath, $newPath);
+
+            // Save new path
+            $data['file_path'] = $newPath;
+        }
+
+        $document->update($data);
+
+        return $this->success(
+            $document,
+            'Document updated successfully'
+        );
     }
 
     public function destroy(Document $document): JsonResponse

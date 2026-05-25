@@ -84,11 +84,16 @@ class Employee extends Model
         'status',
         'avatar',
         'marital_status',
-        'nationality'
+        'nationality',
+        'visa_type',
+        'is_skilled',
+        'additional_documents'
     ];
 
     protected $casts = [
         'special_days' => 'array',
+        'is_skilled' => 'boolean',
+        'additional_documents' => 'array',
     ];
 
     public function user()

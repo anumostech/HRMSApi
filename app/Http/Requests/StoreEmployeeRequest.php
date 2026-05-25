@@ -42,6 +42,22 @@ class StoreEmployeeRequest extends FormRequest
             }
         }
 
+        if ($this->has('additional_documents') && is_array($this->additional_documents)) {
+            $docs = $this->additional_documents;
+            foreach ($docs as $key => $doc) {
+                if (isset($doc['expiry_date']) && $doc['expiry_date']) {
+                    try {
+                        $docs[$key]['expiry_date'] = Carbon::createFromFormat('d-m-Y', $doc['expiry_date'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        // ignore invalid format
+                    }
+                }
+            }
+            $this->merge([
+                'additional_documents' => $docs
+            ]);
+        }
+
         // Convert special days array
         if ($this->has('special_days_date')) {
 
@@ -109,6 +125,11 @@ class StoreEmployeeRequest extends FormRequest
             'home_country_id_proof' => 'nullable|string|starts_with:temp/',
 
             // Details
+            'visa_type' => 'nullable|in:company_visa,family_visa,other_visa',
+            'is_skilled' => 'nullable|boolean',
+            'additional_documents' => 'nullable|array',
+            'additional_documents.*.document_name' => 'required|string|max:255',
+            'additional_documents.*.expiry_date' => 'nullable|date',
             'visa_number' => 'nullable|string|max:255',
             'visa_issued_date' => 'nullable|date',
             'visa_expiry_date' => 'nullable|date',
@@ -128,14 +149,13 @@ class StoreEmployeeRequest extends FormRequest
             'required',
             'email',
                 Rule::unique('employees', 'personal_email')
-                    ->whereNull('deleted_at')        // ignore soft deleted
-                    ->ignore($this->employee)        // ignore current employee on update
+                    ->whereNull('deleted_at')        // ignore current employee on update
             ],
             'status' => 'nullable|in:active,inactive',
             'username' => 'nullable|string|max:255|unique:users,username',
             // 'password' => 'nullable|string|max:255',
             'type' => 'required|in:admin,employee',
-            'role' => 'nullable|string|max:255',
+            'role_id' => 'required|string|max:255',
         ];
     }
 

@@ -150,8 +150,11 @@ class EmployeeApiController extends ApiController
 
     public function destroy(Employee $employee): JsonResponse
     {
+        if ($employee->user) {
+            $employee->user->delete();
+        }
         $employee->delete();
-        return $this->success(null, 'Employee deleted successfully');
+        return $this->success(null, 'User deleted successfully');
     }
 
     public function updateStatus(Request $request, Employee $employee): JsonResponse
