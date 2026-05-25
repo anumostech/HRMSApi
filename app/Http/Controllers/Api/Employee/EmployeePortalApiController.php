@@ -54,7 +54,7 @@ class EmployeePortalApiController extends ApiController
         $leaveBalance = $employee->total_leaves_allocated - $totalLeavesTaken;
 
         // Punch Access Logic
-        $canPunch = false;
+        $canPunch = true;
 
         // 1. Check default designation punch access
         if ($employee->designation && $employee->designation->default_punch_access) {
