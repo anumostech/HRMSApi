@@ -51,23 +51,30 @@ class ProfileApiController extends ApiController
 
         $request->validate([
             'username' => 'nullable|string|max:255|unique:users,username,' . $user->id,
-            'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
-            'avatar' => 'nullable|image|max:2048',
+            'email'    => 'nullable|email|max:255|unique:users,email,' . $user->id,
+            'avatar'   => 'nullable|string|starts_with:temp/',
         ]);
 
-        $data = $request->only('username', 'email');
+        // Update user fields (no avatar here)
+        $userData = $request->only('username', 'email');
+        $user->update($userData);
 
+        // Handle avatar — store in employees table
         if ($request->hasFile('avatar')) {
+            $employee = $user->employee;
+
+            if (!$employee)
+                return $this->error('Employee record not found', 404);
+
             // Delete old avatar if exists
-            if ($user->avatar) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            if ($employee->avatar) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($employee->avatar);
             }
 
             $path = $request->file('avatar')->store('avatars', 'public');
-            $data['avatar'] = $path;
-        }
 
-        $user->update($data);
+            $employee->update(['avatar' => $path]);
+        }
 
         return $this->success($user->load('employee'), 'Profile updated successfully.');
     }

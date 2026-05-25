@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 use Carbon\Carbon;
-
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateEmployeeRequest extends FormRequest
@@ -42,6 +42,22 @@ class UpdateEmployeeRequest extends FormRequest
             }
         }
 
+        if ($this->has('additional_documents') && is_array($this->additional_documents)) {
+            $docs = $this->additional_documents;
+            foreach ($docs as $key => $doc) {
+                if (isset($doc['expiry_date']) && $doc['expiry_date']) {
+                    try {
+                        $docs[$key]['expiry_date'] = Carbon::createFromFormat('d-m-Y', $doc['expiry_date'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        // ignore invalid format
+                    }
+                }
+            }
+            $this->merge([
+                'additional_documents' => $docs
+            ]);
+        }
+
         // Convert special days array
         if ($this->has('special_days_date')) {
 
@@ -67,13 +83,12 @@ class UpdateEmployeeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'avatar' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:2048',
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
             'organization_id' => 'nullable|exists:organizations,id',
             'designation_id' => 'required|exists:designations,id',
             'department_id' => 'required|exists:departments,id',
-            'company_id' => 'sometimes|required|exists:companies,id',
+            'company_id' => 'nullable|exists:companies,id',
             'dob' => 'nullable|date',
             'joining_date' => 'nullable|date',
             'gender' => 'nullable|string|max:255',
@@ -93,20 +108,26 @@ class UpdateEmployeeRequest extends FormRequest
             'mother_name' => 'nullable|string|max:255',
             'address' => 'nullable|string',
 
-            // Documents
-            'passport_1st_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'passport_2nd_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'passport_outer_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'passport_id_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'visa_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'labor_card' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'eid_1st_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'eid_2nd_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'educational_1st_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'educational_2nd_page' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'home_country_id_proof' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            // ── Document Fields (paths from uploadTemp API) ──
+            'avatar'                => 'nullable|string|starts_with:temp/',
+            'passport_1st_page'     => 'nullable|string|starts_with:temp/',
+            'passport_2nd_page'     => 'nullable|string|starts_with:temp/',
+            'passport_outer_page'   => 'nullable|string|starts_with:temp/',
+            'passport_id_page'      => 'nullable|string|starts_with:temp/',
+            'visa_page'             => 'nullable|string|starts_with:temp/',
+            'labor_card'            => 'nullable|string|starts_with:temp/',
+            'eid_1st_page'          => 'nullable|string|starts_with:temp/',
+            'eid_2nd_page'          => 'nullable|string|starts_with:temp/',
+            'educational_1st_page'  => 'nullable|string|starts_with:temp/',
+            'educational_2nd_page'  => 'nullable|string|starts_with:temp/',
+            'home_country_id_proof' => 'nullable|string|starts_with:temp/',
 
             // Details
+            'visa_type' => 'nullable|in:company_visa,family_visa,other_visa',
+            'is_skilled' => 'nullable|boolean',
+            'additional_documents' => 'nullable|array',
+            'additional_documents.*.document_name' => 'required|string|max:255',
+            'additional_documents.*.expiry_date' => 'nullable|date',
             'visa_number' => 'nullable|string|max:255',
             'visa_issued_date' => 'nullable|date',
             'visa_expiry_date' => 'nullable|date',
@@ -122,13 +143,19 @@ class UpdateEmployeeRequest extends FormRequest
             'other_number' => 'nullable|string|max:255',
             'home_country_number' => 'nullable|string|max:255',
             'company_email' => 'nullable|email|max:255',
-            'personal_email' => 'nullable|email|max:255',
+            'personal_email' => [
+            'required',
+            'email',
+                Rule::unique('employees', 'personal_email')
+                    ->whereNull('deleted_at')        // ignore soft deleted
+                    ->ignore($this->employee)        // ignore current employee on update
+            ],
             'status' => 'nullable|in:active,inactive',
             'total_leaves_allocated' => 'nullable|integer|min:0',
             'username' => 'nullable|string|max:255',
             // 'password' => 'nullable|string|max:255',
-            'type' => 'nullable|in:admin,employee',
-            'role' => 'nullable|string|max:255',
+            'type' => 'required|in:admin,employee',
+            'role_id' => 'required|string|max:255',
         ];
     }
 
