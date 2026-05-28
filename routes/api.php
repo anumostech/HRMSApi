@@ -28,6 +28,10 @@ use App\Http\Controllers\Api\Admin\ModuleApiController;
 use App\Http\Controllers\Api\Admin\UserApiController;
 use App\Http\Controllers\Api\Admin\ProjectApiController;
 use App\Http\Controllers\Api\Admin\ProjectAssignmentApiController;
+use App\Http\Controllers\Api\Admin\EmployeeBankDetailApiController;
+use App\Http\Controllers\Api\Admin\EmployeeSalaryComponentApiController;
+use App\Http\Controllers\Api\Admin\EmployeeOnboardingApiController;
+use App\Http\Controllers\Api\Admin\WorkingHourApiController;
 
 
 /*
@@ -83,6 +87,21 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::post('employees/upload-temp', [EmployeeApiController::class, 'uploadTemp'])->middleware('permission:employees.edit');
     Route::post('employees/{employee}/update-status', [EmployeeApiController::class, 'updateStatus'])->middleware('permission:employees.edit');
 
+    // Onboarding
+    Route::post('employees/onboard/details', [EmployeeOnboardingApiController::class, 'saveDetails'])->middleware('permission:employees.edit');
+    Route::post('employees/onboard/salary', [EmployeeOnboardingApiController::class, 'saveSalary'])->middleware('permission:employees.edit');
+    Route::post('employees/onboard/banks', [EmployeeOnboardingApiController::class, 'saveBanks'])->middleware('permission:employees.edit');
+    Route::post('employees/onboard/complete', [EmployeeOnboardingApiController::class, 'complete'])->middleware('permission:employees.edit');
+
+    // Employee Bank Details
+    Route::put('bank-details/{id}', [EmployeeBankDetailApiController::class, 'update'])->middleware('permission:employees.edit');
+    Route::delete('bank-details/{id}', [EmployeeBankDetailApiController::class, 'destroy'])->middleware('permission:employees.edit');
+
+    // Employee Salary Components
+    Route::put('salary-components/{id}', [EmployeeSalaryComponentApiController::class, 'update'])->middleware('permission:employees.edit');
+    Route::delete('salary-components/{id}', [EmployeeSalaryComponentApiController::class, 'destroy'])->middleware('permission:employees.edit');
+
+
     // Attendance
     Route::get('attendance', [AttendanceApiController::class, 'index'])->middleware('permission:attendance.read');
     Route::post('attendance/upload', [AttendanceApiController::class, 'upload'])->middleware('permission:attendance.edit');
@@ -110,8 +129,10 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::get('shareable-users', [DocumentApiController::class, 'getShareableUsers']);
 
     // Projects
+    Route::get('projects/eligible-managers', [ProjectApiController::class, 'getEligibleManagers']);
     Route::apiResource('projects', ProjectApiController::class);
     Route::get('project-assignments', [ProjectAssignmentApiController::class, 'index']);
+    Route::get('project-assignments/{id}', [ProjectAssignmentApiController::class, 'show']);
     Route::post('employees/projects', [ProjectAssignmentApiController::class, 'assign']);
 
     // HR Modules
@@ -142,6 +163,10 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     // Leave Types (Admin side)
     Route::apiResource('leave-types', LeaveTypeApiController::class)->middleware('permission:settings.read');
     Route::post('leave-types/{leaveType}/status', [LeaveTypeApiController::class, 'updateStatus'])->middleware('permission:settings.edit');
+
+    // Working Hours
+    Route::get('working-hours', [WorkingHourApiController::class, 'index'])->middleware('permission:settings.read');
+    Route::post('working-hours', [WorkingHourApiController::class, 'store'])->middleware('permission:settings.edit');
 
     // Leave Allocations
     Route::get('leave-allocations', [LeaveAllocationApiController::class, 'index'])->middleware('permission:leave.read');

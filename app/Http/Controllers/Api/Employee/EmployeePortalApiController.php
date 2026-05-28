@@ -32,7 +32,7 @@ class EmployeePortalApiController extends ApiController
         $today = Carbon::today()->toDateString();
 
         // Attendance stats for today
-        $attendance = AttendanceLog::where('userid', $employee->employee_id)
+        $attendance = AttendanceLog::where('userid', $user->id)
             ->whereDate('log_date', $today)
             ->select('punch_in', 'punch_out', 'punch_in_latitude', 'punch_in_longitude', 'punch_in_address', 'punch_out_latitude', 'punch_out_longitude', 'punch_out_address')
             ->first();
@@ -40,7 +40,7 @@ class EmployeePortalApiController extends ApiController
         // 30-day attendance history
         $from = Carbon::now()->subDays(30)->startOfDay();
         $to = Carbon::now()->endOfDay();
-        $attendanceHistory = AttendanceLog::where('userid', $employee->employee_id)
+        $attendanceHistory = AttendanceLog::where('userid', $user->id)
             ->whereBetween('log_date', [$from, $to])
             ->select('log_date', 'punch_in', 'punch_out', 'punch_in_latitude', 'punch_in_longitude', 'punch_in_address', 'punch_out_latitude', 'punch_out_longitude', 'punch_out_address')
             ->orderByDesc('log_date')
@@ -119,9 +119,19 @@ class EmployeePortalApiController extends ApiController
         if (!$employee)
             return $this->error('Employee profile not found', 404);
 
+        // Check for missing punch out on previous records
+        $missingPunchOut = AttendanceLog::where('userid', $user->id)
+            ->whereNull('punch_out')
+            ->orderBy('log_date', 'desc')
+            ->first();
+
+        if ($missingPunchOut) {
+            return $this->error("You have a pending punch-out for {$missingPunchOut->log_date}. Please complete your project timings and punch out for that day first.", 403);
+        }
+
         $today = Carbon::today()->toDateString();
 
-        $alreadyPunched = AttendanceLog::where('userid', $employee->employee_id)
+        $alreadyPunched = AttendanceLog::where('userid', $user->id)
             ->whereDate('log_date', $today)
             ->exists();
 
@@ -131,7 +141,7 @@ class EmployeePortalApiController extends ApiController
 
         $log = AttendanceLog::create([
             'company_id' => $user->company_id ?? 1,
-            'userid' => $employee->employee_id,
+            'userid' => $user->id,
             'log_date' => $today,
             'punch_in' => Carbon::now(),
             'status' => 1,
@@ -150,12 +160,12 @@ class EmployeePortalApiController extends ApiController
     public function punchOut(Request $request): JsonResponse
     {
         $request->validate([
-            'tasks_completed' => 'required|string',
-            'plan_tomorrow' => 'required|string',
-            'remarks' => 'nullable|string',
             'location.latitude' => 'nullable|numeric',
             'location.longitude' => 'nullable|numeric',
-            'location.address' => 'nullable|string'
+            'location.address' => 'nullable|string',
+            'project_times' => 'nullable|array',
+            'project_times.*.project_id' => 'required|exists:projects,id',
+            'project_times.*.time_minutes' => 'required|integer|min:1',
         ]);
 
         $user = auth('api')->user();
@@ -163,25 +173,56 @@ class EmployeePortalApiController extends ApiController
         if (!$employee)
             return $this->error('Employee profile not found', 404);
 
-        $today = Carbon::today()->toDateString();
-
-        $log = AttendanceLog::where('userid', $employee->employee_id)
-            ->whereDate('log_date', $today)
+        // Get the active punch in record (could be from today or a previous day they forgot to punch out of)
+        $log = AttendanceLog::where('userid', $user->id)
+            ->whereNull('punch_out')
+            ->orderBy('log_date', 'desc')
             ->first();
 
         if (!$log)
-            return $this->error('You have not punched in yet.', 400);
-        if ($log->punch_out)
-            return $this->error('Already punched out today.', 400);
+            return $this->error('You have no active punch in.', 400);
 
-        TaskReport::updateOrCreate(
-            ['employee_id' => $employee->id, 'date' => $today],
-            [
-                'tasks_completed' => $request->tasks_completed,
-                'plan_tomorrow' => $request->plan_tomorrow,
-                'remarks' => $request->remarks
-            ]
-        );
+        $logDate = $log->log_date;
+        $dayOfWeek = Carbon::parse($logDate)->format('l');
+
+        $assignedProjectIds = $employee->projects()->pluck('projects.id')->toArray();
+
+        if (count($assignedProjectIds) > 0) {
+            $submittedProjectTimes = collect($request->project_times ?? []);
+            
+            $submittedProjectIds = $submittedProjectTimes->pluck('project_id')->toArray();
+            $missingProjects = array_diff($assignedProjectIds, $submittedProjectIds);
+            
+            if (count($missingProjects) > 0) {
+
+        return response()->json([
+            'message' => 'Please complete time entry for all assigned projects before punching out.',
+            'submittedProjectTimes' => $submittedProjectTimes,
+            'submitted_projects_count' => count($submittedProjectIds),
+            'missing_projects_count' => count($missingProjects),
+            'missing_project_ids' => array_values($missingProjects),
+        ], 422);
+    }
+
+            $totalMinutes = $submittedProjectTimes->sum('time_minutes');
+            
+            $workingHour = \App\Models\WorkingHour::where('day', $dayOfWeek)->where('is_enabled', true)->first();
+            $requiredMinutes = 0;
+            if ($workingHour && $workingHour->start_time && $workingHour->end_time) {
+                $requiredMinutes = Carbon::parse($workingHour->start_time)->diffInMinutes(Carbon::parse($workingHour->end_time));
+            }
+
+            if ($requiredMinutes > 0 && $totalMinutes < $requiredMinutes) {
+                return $this->error("Total project time logged ($totalMinutes mins) is less than the required working hours ($requiredMinutes mins) for $dayOfWeek.", 422);
+            }
+
+            foreach ($submittedProjectTimes as $pt) {
+                \App\Models\ProjectTimeLog::updateOrCreate(
+                    ['employee_id' => $user->id, 'project_id' => $pt['project_id'], 'date' => $logDate],
+                    ['time_taken_minutes' => $pt['time_minutes']]
+                );
+            }
+        }
 
         $log->update([
             'punch_out' => Carbon::now(),
@@ -191,7 +232,7 @@ class EmployeePortalApiController extends ApiController
             'punch_out_address' => $request->input('location.address')
         ]);
 
-        return $this->success($log, 'Punched out successfully and tasks submitted.');
+        return $this->success($log, 'Punched out successfully.');
     }
 
     /**
@@ -323,8 +364,8 @@ class EmployeePortalApiController extends ApiController
     public function storeTaskReport(Request $request): JsonResponse
     {
         $request->validate([
-            'tasks_completed' => 'required|string',
-            'plan_tomorrow' => 'required|string',
+            'tasks_completed' => 'nullable|string',
+            'plan_tomorrow' => 'nullable|string',
             'remarks' => 'nullable|string',
             'date' => 'nullable|date'
         ]);
@@ -352,8 +393,8 @@ class EmployeePortalApiController extends ApiController
     public function updateTaskReport(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'tasks_completed' => 'required|string',
-            'plan_tomorrow' => 'required|string',
+            'tasks_completed' => 'nullable|string',
+            'plan_tomorrow' => 'nullable|string',
             'remarks' => 'nullable|string'
         ]);
 
