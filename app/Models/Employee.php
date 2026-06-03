@@ -92,7 +92,8 @@ class Employee extends Model
         'key_skills',
         'highest_education',
         'currency',
-        'payment_cycle'
+        'payment_cycle',
+        'moh_license_number'
     ];
 
     protected $casts = [

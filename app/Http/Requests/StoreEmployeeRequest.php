@@ -139,6 +139,7 @@ class StoreEmployeeRequest extends FormRequest
             'eid_number' => 'nullable|string|max:255',
             'eid_issued_date' => 'nullable|date',
             'eid_expiry_date' => 'nullable|date',
+            'moh_license_number' => 'nullable|string|max:255',
             'dependents' => 'nullable|string|max:255',
             'experience_level' => 'nullable|string|max:255',
             'key_skills' => 'nullable|string',
