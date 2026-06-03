@@ -60,8 +60,8 @@ class EmployeeOnboardingApiController extends ApiController
                     'username' => $userEmail,
                     'email' => $userEmail,
                     'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(10)),
-                    'organization_id' => 1,
-                    'company_id' => 1,
+                    'organization_id' => $request->organization_id ?? 1,
+                    'company_id' => $request->company_id ?? null,
                     'type' => 'employee',
                     'status' => 'onboarding',
                 ]);
@@ -104,13 +104,12 @@ class EmployeeOnboardingApiController extends ApiController
     public function saveSalary(Request $request): JsonResponse
     {
         $user_id = $request->user_id;
-        $employee = null;
 
-        if ($user_id) {
-            $employee = Employee::where('user_id', $user_id)->orWhere('id', $user_id)->firstOrFail();
-        } else {
-            $employee = new Employee();
+        if (!$user_id) {
+            return $this->error('User ID is required', 400);
         }
+
+        $employee = Employee::where('user_id', $user_id)->orWhere('id', $user_id)->firstOrFail();
 
         $request->validate([
             'currency' => 'required|string|max:255',
@@ -148,13 +147,12 @@ class EmployeeOnboardingApiController extends ApiController
     public function saveBanks(Request $request): JsonResponse
     {
         $user_id = $request->user_id;
-        $employee = null;
 
-        if ($user_id) {
-            $employee = Employee::where('user_id', $user_id)->orWhere('id', $user_id)->firstOrFail();
-        } else {
-            $employee = new Employee();
+        if (!$user_id) {
+            return $this->error('User ID is required', 400);
         }
+
+        $employee = Employee::where('user_id', $user_id)->orWhere('id', $user_id)->firstOrFail();
 
         $request->validate([
             'bank_details' => 'nullable|array',
@@ -187,16 +185,29 @@ class EmployeeOnboardingApiController extends ApiController
     public function complete(Request $request): JsonResponse
     {
         $user_id = $request->user_id;
-        $employee = null;
 
-        if ($user_id) {
-            $employee = Employee::where('user_id', $user_id)->orWhere('id', $user_id)->firstOrFail();
-        } else {
-            $employee = new Employee();
+        if (!$user_id) {
+            return $this->error('User ID is required', 400);
         }
 
+        $employee = Employee::where('user_id', $user_id)->orWhere('id', $user_id)->firstOrFail();
+
         if ($employee->user) {
-            $employee->user->update(['status' => 'onboarding']);
+            $randomPassword = \Illuminate\Support\Str::random(10);
+            
+            $employee->user->update([
+                'status' => 'onboarding',
+                'password' => \Illuminate\Support\Facades\Hash::make($randomPassword)
+            ]);
+
+            $recipient = $employee->company_email ?: $employee->personal_email;
+            if ($recipient) {
+                try {
+                    \Illuminate\Support\Facades\Mail::to($recipient)->send(new \App\Mail\UserRegistrationMail($employee->user, $randomPassword, $employee));
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Failed to send registration email: ' . $e->getMessage());
+                }
+            }
         }
 
         return $this->success($employee->fresh()->load('user', 'salaryComponents', 'bankDetails'), 'Onboarding completed successfully');

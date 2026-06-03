@@ -25,10 +25,13 @@ class ProjectApiController extends ApiController
     {
         $allowedRoles = [
             'Super Admin',
+            'Admin',
+            'Subadmin',
             'HR Manager',
             'BIM Manager',
             'BIM Assistant Manager',
-            'BIM Team Lead'
+            'BIM Team Lead',
+            'BIM Coordinator'
         ];
 
         $employees = \App\Models\Employee::whereHas('user.role', function ($query) use ($allowedRoles) {

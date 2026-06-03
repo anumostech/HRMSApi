@@ -138,7 +138,6 @@ class UpdateEmployeeRequest extends FormRequest
             'eid_issued_date' => 'nullable|date',
             'eid_expiry_date' => 'nullable|date',
             'dependents' => 'nullable|string|max:255',
-            'nationality' => 'nullable|string|max:255',
             'experience_level' => 'nullable|string|max:255',
             'key_skills' => 'nullable|string',
             'highest_education' => 'nullable|string|max:255',
@@ -162,15 +161,15 @@ class UpdateEmployeeRequest extends FormRequest
                     ->whereNull('deleted_at')        
                     ->ignore($this->employee)        
             ],
-            'status' => 'nullable|in:active,inactive',
+            'status' => 'nullable|in:active,inactive,onboarding',
             'total_leaves_allocated' => 'nullable|integer|min:0',
-            'username' => 'nullable|string|max:255|unique:users,username',
+            'username' => 'nullable|string|max:255',
             'email' => [
             'nullable',
             'email',
                 Rule::unique('users', 'email')
                     ->whereNull('deleted_at')    
-                    ->ignore($this->user->id)     
+                    ->ignore($this->user?->id)     
             ],
             'type' => 'required|in:admin,employee',
             'role_id' => 'required',

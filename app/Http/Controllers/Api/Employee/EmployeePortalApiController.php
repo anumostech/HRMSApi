@@ -140,7 +140,7 @@ class EmployeePortalApiController extends ApiController
         }
 
         $log = AttendanceLog::create([
-            'company_id' => $user->company_id ?? 1,
+            // 'company_id' => $user->company_id ?? 1,
             'userid' => $user->id,
             'log_date' => $today,
             'punch_in' => Carbon::now(),
@@ -250,27 +250,57 @@ class EmployeePortalApiController extends ApiController
     }
 
     public function leaveTypesAndBalance(): JsonResponse
-    {
-        $user = auth('api')->user();
-        $employee = $user ? $user->employee : null;
-        if (!$employee)
-            return $this->error('Employee profile not found', 404);
+{
+    $user = auth('api')->user();
+    $employee = $user ? $user->employee : null;
+    if (!$employee)
+        return $this->error('Employee profile not found', 404);
 
-        $leaveTypes = \App\Models\LeaveType::where('status', true)->get();
+    $leaveTypes = \App\Models\LeaveType::where('status', true)->get();
 
-        $leavesTaken = LeaveRequest::where('employee_id', $employee->id)
-            ->whereIn('status', ['approved', 'pending'])
-            ->sum('duration_days');
+    // Get all approved/pending leave requests for this employee grouped by type
+    $leaveRequests = LeaveRequest::where('employee_id', $employee->id)
+        ->whereIn('status', ['approved', 'pending'])
+        ->selectRaw('leave_type_id, status, SUM(duration_days) as total_days')
+        ->groupBy('leave_type_id', 'status')
+        ->get()
+        ->groupBy('leave_type_id');
 
-        $remainingBalance = (float) $employee->total_leaves_allocated - (float) $leavesTaken;
+    $totalAllocated = 0;
+    $totalTaken     = 0;
+    $totalBalance   = 0;
 
-        return $this->success([
-            'leave_types' => $leaveTypes,
-            'total_allocated' => (float) $employee->total_leaves_allocated,
-            'leaves_taken' => (float) $leavesTaken,
-            'remaining_balance' => (float) $remainingBalance
-        ]);
-    }
+    $leaveTypesData = $leaveTypes->map(function ($leaveType) use ($leaveRequests, &$totalAllocated, &$totalTaken, &$totalBalance) {
+        $typeRequests = $leaveRequests->get($leaveType->id, collect());
+
+        $taken   = (float) optional($typeRequests->firstWhere('status', 'approved'))->total_days ?? 0;
+        $pending = (float) optional($typeRequests->firstWhere('status', 'pending'))->total_days  ?? 0;
+
+        $allocated = (float) $leaveType->allocated_days; // adjust to your actual column name
+        $balance   = $allocated - $taken;
+
+        $totalAllocated += $allocated;
+        $totalTaken     += $taken;
+        $totalBalance   += $balance;
+
+        return [
+            'id'        => $leaveType->id,
+            'name'      => $leaveType->name,
+            'status'    => $leaveType->status,
+            'allocated' => $allocated,
+            'taken'     => $taken,
+            'pending'   => $pending,
+            'balance'   => $balance,
+        ];
+    });
+
+    return $this->success([
+        'leave_types'       => $leaveTypesData,
+        'total_allocated'   => $totalAllocated,
+        'leaves_taken'      => $totalTaken,
+        'remaining_balance' => $totalBalance,
+    ]);
+}
 
     public function storeLeave(Request $request): JsonResponse
     {
