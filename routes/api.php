@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordApiController;
+use App\Http\Controllers\Api\Admin\OffboardingApiController;
 use App\Http\Controllers\Api\Admin\EmployeeApiController;
 use App\Http\Controllers\Api\Admin\OrganizationApiController;
 use App\Http\Controllers\Api\Admin\CompanyApiController;
@@ -225,4 +226,15 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'employee'], function () {
     Route::post('update-profile', [ProfileApiController::class, 'updateProfile']);
 });
 
-
+// Offboarding Routes
+Route::group(['middleware' => 'auth:api', 'prefix' => 'offboarding'], function () {
+    Route::get('/', [OffboardingApiController::class, 'index']);
+    Route::post('/initiate', [OffboardingApiController::class, 'initiate']);
+    Route::get('/{id}', [OffboardingApiController::class, 'show']);
+    Route::post('/{id}/visa-status', [OffboardingApiController::class, 'updateVisaStatus']);
+    Route::post('/{id}/checklist', [OffboardingApiController::class, 'updateChecklist']);
+    Route::post('/{id}/assets', [OffboardingApiController::class, 'updateAssets']);
+    Route::post('/{id}/interview', [OffboardingApiController::class, 'submitInterview']);
+    Route::post('/{id}/settlement', [OffboardingApiController::class, 'updateSettlement']);
+    Route::post('/{id}/letters', [OffboardingApiController::class, 'generateLetters']);
+});

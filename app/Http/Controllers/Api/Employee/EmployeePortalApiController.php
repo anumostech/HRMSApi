@@ -7,6 +7,7 @@ use App\Models\AttendanceLog;
 use App\Models\TaskReport;
 use App\Models\WfhRequest;
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,7 +86,7 @@ class EmployeePortalApiController extends ApiController
                     'latitude' => $attendance ? $attendance->punch_in_latitude : null,
                     'longitude' => $attendance ? $attendance->punch_in_longitude : null,
                     'address' => $attendance ? $attendance->punch_in_address : null
-                 ],
+                ],
                 'punch_out_location' => [          // ← ADD THIS
                     'latitude' => $attendance ? $attendance->punch_out_latitude : null,
                     'longitude' => $attendance ? $attendance->punch_out_longitude : null,
@@ -189,23 +190,23 @@ class EmployeePortalApiController extends ApiController
 
         if (count($assignedProjectIds) > 0) {
             $submittedProjectTimes = collect($request->project_times ?? []);
-            
+
             $submittedProjectIds = $submittedProjectTimes->pluck('project_id')->toArray();
             $missingProjects = array_diff($assignedProjectIds, $submittedProjectIds);
-            
+
             if (count($missingProjects) > 0) {
 
-        return response()->json([
-            'message' => 'Please complete time entry for all assigned projects before punching out.',
-            'submittedProjectTimes' => $submittedProjectTimes,
-            'submitted_projects_count' => count($submittedProjectIds),
-            'missing_projects_count' => count($missingProjects),
-            'missing_project_ids' => array_values($missingProjects),
-        ], 422);
-    }
+                return response()->json([
+                    'message' => 'Please complete time entry for all assigned projects before punching out.',
+                    'submittedProjectTimes' => $submittedProjectTimes,
+                    'submitted_projects_count' => count($submittedProjectIds),
+                    'missing_projects_count' => count($missingProjects),
+                    'missing_project_ids' => array_values($missingProjects),
+                ], 422);
+            }
 
             $totalMinutes = $submittedProjectTimes->sum('time_minutes');
-            
+
             $workingHour = \App\Models\WorkingHour::where('day', $dayOfWeek)->where('is_enabled', true)->first();
             $requiredMinutes = 0;
             if ($workingHour && $workingHour->start_time && $workingHour->end_time) {
@@ -250,57 +251,64 @@ class EmployeePortalApiController extends ApiController
     }
 
     public function leaveTypesAndBalance(): JsonResponse
-{
-    $user = auth('api')->user();
-    $employee = $user ? $user->employee : null;
-    if (!$employee)
-        return $this->error('Employee profile not found', 404);
+    {
+        $user = auth('api')->user();
+        $employee = $user ? $user->employee : null;
+        if (!$employee)
+            return $this->error('Employee profile not found', 404);
 
-    $leaveTypes = \App\Models\LeaveType::where('status', true)->get();
+        $leaveTypes = LeaveType::where('status', true)->get();
 
-    // Get all approved/pending leave requests for this employee grouped by type
-    $leaveRequests = LeaveRequest::where('employee_id', $employee->id)
-        ->whereIn('status', ['approved', 'pending'])
-        ->selectRaw('leave_type_id, status, SUM(duration_days) as total_days')
-        ->groupBy('leave_type_id', 'status')
-        ->get()
-        ->groupBy('leave_type_id');
+        $currentYear = date('Y');
+        $allocations = \App\Models\LeaveAllocation::where('employee_id', $employee->id)
+            ->where('year', $currentYear)
+            ->get()
+            ->keyBy('leave_type_id');
 
-    $totalAllocated = 0;
-    $totalTaken     = 0;
-    $totalBalance   = 0;
+        // Get all approved/pending leave requests for this employee grouped by type
+        $leaveRequests = LeaveRequest::where('employee_id', $employee->id)
+            ->whereIn('status', ['approved', 'pending'])
+            ->selectRaw('leave_type_id, status, SUM(duration_days) as total_days')
+            ->groupBy('leave_type_id', 'status')
+            ->get()
+            ->groupBy('leave_type_id');
 
-    $leaveTypesData = $leaveTypes->map(function ($leaveType) use ($leaveRequests, &$totalAllocated, &$totalTaken, &$totalBalance) {
-        $typeRequests = $leaveRequests->get($leaveType->id, collect());
+        $totalAllocated = 0;
+        $totalTaken = 0;
+        $totalBalance = 0;
 
-        $taken   = (float) optional($typeRequests->firstWhere('status', 'approved'))->total_days ?? 0;
-        $pending = (float) optional($typeRequests->firstWhere('status', 'pending'))->total_days  ?? 0;
+        $leaveTypesData = $leaveTypes->map(function ($leaveType) use ($leaveRequests, $allocations, &$totalAllocated, &$totalTaken, &$totalBalance) {
+            $typeRequests = $leaveRequests->get($leaveType->id, collect());
+            $allocation = $allocations->get($leaveType->id);
 
-        $allocated = (float) $leaveType->allocated_days; // adjust to your actual column name
-        $balance   = $allocated - $taken;
+            $taken = (float) optional($typeRequests->firstWhere('status', 'approved'))->total_days ?? 0;
+            $pending = (float) optional($typeRequests->firstWhere('status', 'pending'))->total_days ?? 0;
 
-        $totalAllocated += $allocated;
-        $totalTaken     += $taken;
-        $totalBalance   += $balance;
+            $allocated = $allocation ? (float) $allocation->allocated_days : 0;
+            $balance = $allocated - $taken;
 
-        return [
-            'id'        => $leaveType->id,
-            'name'      => $leaveType->name,
-            'status'    => $leaveType->status,
-            'allocated' => $allocated,
-            'taken'     => $taken,
-            'pending'   => $pending,
-            'balance'   => $balance,
-        ];
-    });
+            $totalAllocated += $allocated;
+            $totalTaken += $taken;
+            $totalBalance += $balance;
 
-    return $this->success([
-        'leave_types'       => $leaveTypesData,
-        'total_allocated'   => $totalAllocated,
-        'leaves_taken'      => $totalTaken,
-        'remaining_balance' => $totalBalance,
-    ]);
-}
+            return [
+                'id' => $leaveType->id,
+                'name' => $leaveType->name,
+                'status' => $leaveType->status,
+                'allocated' => $allocated,
+                'taken' => $taken,
+                'pending' => $pending,
+                'balance' => $balance,
+            ];
+        });
+
+        return $this->success([
+            'leave_types' => $leaveTypesData,
+            'total_allocated' => $totalAllocated,
+            'leaves_taken' => $totalTaken,
+            'remaining_balance' => $totalBalance,
+        ]);
+    }
 
     public function storeLeave(Request $request): JsonResponse
     {
@@ -331,11 +339,20 @@ class EmployeePortalApiController extends ApiController
         $durationDays = $start->diffInDays($end) + 1;
 
         // Balance check
+        $currentYear = date('Y');
+        $allocation = \App\Models\LeaveAllocation::where('employee_id', $employee->id)
+            ->where('leave_type_id', $request->leave_type_id)
+            ->where('year', $currentYear)
+            ->first();
+
+        $allocated = $allocation ? (float) $allocation->allocated_days : 0;
+
         $leavesTaken = LeaveRequest::where('employee_id', $employee->id)
+            ->where('leave_type_id', $request->leave_type_id)
             ->whereIn('status', ['approved', 'pending'])
             ->sum('duration_days');
 
-        $remainingBalance = $employee->total_leaves_allocated - $leavesTaken;
+        $remainingBalance = $allocated - $leavesTaken;
 
         if ($durationDays > $remainingBalance) {
             return $this->error("Insufficient leave balance. You have only $remainingBalance days remaining.", 422);

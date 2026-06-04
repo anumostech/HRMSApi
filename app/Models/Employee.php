@@ -93,7 +93,8 @@ class Employee extends Model
         'highest_education',
         'currency',
         'payment_cycle',
-        'moh_license_number'
+        'moh_license_number',
+        'reporting_manager_id'
     ];
 
     protected $casts = [
@@ -146,5 +147,15 @@ class Employee extends Model
     public function bankDetails()
     {
         return $this->hasMany(EmployeeBankDetail::class);
+    }
+
+    public function reportingManager()
+    {
+        return $this->belongsTo(Employee::class, 'reporting_manager_id');
+    }
+
+    public function offboardings()
+    {
+        return $this->hasMany(Offboarding::class);
     }
 }
