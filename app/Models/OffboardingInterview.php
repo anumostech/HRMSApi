@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class OffboardingInterview extends Model
 {
@@ -27,3 +28,4 @@ class OffboardingInterview extends Model
         return $this->belongsTo(Offboarding::class);
     }
 }
+

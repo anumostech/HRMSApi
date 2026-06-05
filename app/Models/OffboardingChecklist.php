@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class OffboardingChecklist extends Model
 {
@@ -21,4 +22,13 @@ class OffboardingChecklist extends Model
     {
         return $this->belongsTo(Offboarding::class);
     }
+
+    public function category()
+    {
+        return $this->belongsTo(
+            OffboardingChecklistCategory::class,
+            'category_id'
+        );
+    }
 }
+

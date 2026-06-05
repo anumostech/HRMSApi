@@ -242,7 +242,7 @@ class EmployeeApiController extends ApiController
             if (!empty($data[$field]) && strpos($data[$field], 'temp/') === 0) {
                 $tempPath = $data[$field];
                 $fileName = basename($tempPath);
-                
+
                 $dir = ($field === 'avatar') ? 'avatars' : 'documents';
                 $newPath = $dir . '/' . $fileName;
 

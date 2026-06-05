@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Offboarding extends Model
 {
@@ -50,3 +51,4 @@ class Offboarding extends Model
         return $this->hasMany(OffboardingLetter::class);
     }
 }
+

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordApiController;
 use App\Http\Controllers\Api\Admin\OffboardingApiController;
+use App\Http\Controllers\Api\Admin\OffboardingChecklistApiController;
 use App\Http\Controllers\Api\Admin\EmployeeApiController;
 use App\Http\Controllers\Api\Admin\OrganizationApiController;
 use App\Http\Controllers\Api\Admin\CompanyApiController;
@@ -33,6 +34,9 @@ use App\Http\Controllers\Api\Admin\EmployeeBankDetailApiController;
 use App\Http\Controllers\Api\Admin\EmployeeSalaryComponentApiController;
 use App\Http\Controllers\Api\Admin\EmployeeOnboardingApiController;
 use App\Http\Controllers\Api\Admin\WorkingHourApiController;
+use App\Http\Controllers\Api\Admin\AssetTypeApiController;
+use App\Http\Controllers\Api\Admin\AssetApiController;
+use App\Http\Controllers\Api\Admin\OffboardingChecklistCategoryController;
 
 
 /*
@@ -190,6 +194,52 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
         Route::get('pending-leaves', [ReportApiController::class, 'pendingLeavesReport']);
         Route::post('export', [ReportApiController::class, 'export'])->middleware('permission:reports.read');
     });
+
+    // Offboarding Routes
+    Route::group(['prefix' => 'offboarding'], function () {
+        Route::get('/', [OffboardingApiController::class, 'index']);
+        Route::post('/initiate', [OffboardingApiController::class, 'initiate']);
+        Route::get('/{id}', [OffboardingApiController::class, 'show']);
+        Route::get('/{id}/visa-status', [OffboardingApiController::class, 'getVisaStatus']);
+        Route::post('/{id}/visa-status/complete', [OffboardingApiController::class, 'completeVisaStatus']);
+        Route::post('/{id}/checklists', [OffboardingApiController::class, 'updateChecklist']);
+        Route::post('/{id}/assets', [OffboardingApiController::class, 'updateAssets']);
+        Route::post('/{id}/interview', [OffboardingApiController::class, 'submitInterview']);
+        Route::post('/{id}/settlement', [OffboardingApiController::class, 'updateSettlement']);
+        Route::post('/{id}/letters', [OffboardingApiController::class, 'generateLetters']);
+        Route::get('/{id}/progress', [OffboardingApiController::class, 'getProgress']);
+
+        //Checklists
+        Route::prefix('checklists')->group(function () {
+
+            Route::get('/{id}', [OffboardingChecklistApiController::class, 'index']);
+            Route::post('/{id}', [OffboardingChecklistApiController::class, 'store']);
+            Route::put('/item/{id}', [OffboardingChecklistApiController::class, 'update']);
+            Route::patch('/item/{id}/status', [OffboardingChecklistApiController::class, 'updateStatus']);
+            Route::delete('/item/{id}', [OffboardingChecklistApiController::class, 'destroy']);
+            Route::prefix('categories')->group(function () {
+                Route::get('/', [OffboardingChecklistCategoryController::class, 'index']);
+                Route::post('/', [OffboardingChecklistCategoryController::class, 'store']);
+                Route::get('/{id}', [OffboardingChecklistCategoryController::class, 'show']);
+                Route::put('/{id}', [OffboardingChecklistCategoryController::class, 'update']);
+                Route::delete('/{id}', [OffboardingChecklistCategoryController::class, 'destroy']);
+            });
+        });
+    });
+
+    // Asset Management
+    Route::group(['prefix' => 'assets'], function () {
+        Route::apiResource('types', AssetTypeApiController::class);
+
+        Route::get('/', [AssetApiController::class, 'index']);
+        Route::post('/', [AssetApiController::class, 'store']);
+        Route::get('/{id}', [AssetApiController::class, 'show']);
+        Route::put('/{id}', [AssetApiController::class, 'update']);
+        Route::delete('/{id}', [AssetApiController::class, 'destroy']);
+
+        Route::post('/{id}/assign', [AssetApiController::class, 'assign']);
+        Route::post('/{id}/revoke', [AssetApiController::class, 'revoke']);
+    });
 });
 
 // Employee Protected Routes (Now also using auth:api)
@@ -221,20 +271,12 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'employee'], function () {
     Route::get('attendance-requests', [EmployeeAttendanceRequestApiController::class, 'index']);
     Route::post('attendance-requests', [EmployeeAttendanceRequestApiController::class, 'store']);
 
+    //Assets
+    Route::get('assets/{id}', [AssetApiController::class, 'employeeAssets']);
+
     // Profile Settings
     Route::post('change-password', [ProfileApiController::class, 'changePassword']);
     Route::post('update-profile', [ProfileApiController::class, 'updateProfile']);
 });
 
-// Offboarding Routes
-Route::group(['middleware' => 'auth:api', 'prefix' => 'offboarding'], function () {
-    Route::get('/', [OffboardingApiController::class, 'index']);
-    Route::post('/initiate', [OffboardingApiController::class, 'initiate']);
-    Route::get('/{id}', [OffboardingApiController::class, 'show']);
-    Route::post('/{id}/visa-status', [OffboardingApiController::class, 'updateVisaStatus']);
-    Route::post('/{id}/checklist', [OffboardingApiController::class, 'updateChecklist']);
-    Route::post('/{id}/assets', [OffboardingApiController::class, 'updateAssets']);
-    Route::post('/{id}/interview', [OffboardingApiController::class, 'submitInterview']);
-    Route::post('/{id}/settlement', [OffboardingApiController::class, 'updateSettlement']);
-    Route::post('/{id}/letters', [OffboardingApiController::class, 'generateLetters']);
-});
+

@@ -6,12 +6,40 @@ use App\Http\Controllers\Api\ApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\JsonResponse;
+use OpenApi\Attributes as OA;
 
 class LoginController extends ApiController
 {
-    /**
-     * Login (Single endpoint for all users)
-     */
+    #[OA\Post(
+        path: "/api/auth/login",
+        operationId: "loginUser",
+        summary: "Login user",
+        description: "Login and return an access token",
+        tags: ["Authentication"]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["username", "password"],
+            properties: [
+                new OA\Property(property: "username", type: "string", example: "admin@example.com"),
+                new OA\Property(property: "password", type: "string", example: "password123")
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Successful login",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "access_token", type: "string"),
+                new OA\Property(property: "token_type", type: "string", example: "bearer"),
+                new OA\Property(property: "user", type: "object")
+            ]
+        )
+    )]
+    #[OA\Response(response: 401, description: "Unauthorized")]
+    #[OA\Response(response: 422, description: "Validation Error")]
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -84,18 +112,32 @@ class LoginController extends ApiController
         ], 'Login successful');
     }
 
-    /**
-     * Logout
-     */
+    #[OA\Post(
+        path: "/api/auth/logout",
+        operationId: "logoutUser",
+        summary: "Logout user",
+        description: "Logout the currently authenticated user",
+        security: [["bearerAuth" => []]],
+        tags: ["Authentication"]
+    )]
+    #[OA\Response(response: 200, description: "Successfully logged out")]
+    #[OA\Response(response: 401, description: "Unauthenticated")]
     public function logout(): JsonResponse
     {
         auth('api')->logout();
         return $this->success(null, 'Successfully logged out');
     }
 
-    /**
-     * Get logged-in user
-     */
+    #[OA\Get(
+        path: "/api/auth/me",
+        operationId: "getAuthenticatedUser",
+        summary: "Get logged-in user",
+        description: "Get details of the currently authenticated user",
+        security: [["bearerAuth" => []]],
+        tags: ["Authentication"]
+    )]
+    #[OA\Response(response: 200, description: "Successful operation")]
+    #[OA\Response(response: 401, description: "Unauthenticated")]
     public function me(): JsonResponse
     {
         if (!auth('api')->check()) {
