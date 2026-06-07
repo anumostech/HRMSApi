@@ -18,7 +18,7 @@ class OffboardingChecklistApiController extends Controller
     // -------------------------------------------------------------------------
 
     #[OA\Get(
-        path: '/api/admin/admin/offboarding/{offboardingId}/checklists',
+        path: '/api/admin/admin/checklists/{id}',
         operationId: 'getOffboardingChecklists',
         summary: 'Get all checklist items for an offboarding record',
         security: [['bearerAuth' => []]],
@@ -39,13 +39,13 @@ class OffboardingChecklistApiController extends Controller
             items: new OA\Items(
                 type: 'object',
                 properties: [
-                    new OA\Property(property: 'id',               type: 'integer', example: 1),
-                    new OA\Property(property: 'offboarding_id',   type: 'integer', example: 1),
-                    new OA\Property(property: 'category_id',         type: 'string',  example: 'visa_cancellation'),
-                    new OA\Property(property: 'task_name',        type: 'string',  example: 'Submit visa cancellation to GDRFA'),
-                    new OA\Property(property: 'status',           type: 'string',  example: 'pending'),
-                    new OA\Property(property: 'responsible_role', type: 'string',  example: 'PRO'),
-                    new OA\Property(property: 'notes',            type: 'string',  nullable: true, example: null),
+                    new OA\Property(property: 'id', type: 'integer', example: 1),
+                    new OA\Property(property: 'offboarding_id', type: 'integer', example: 1),
+                    new OA\Property(property: 'category_id', type: 'integer', example: 1),
+                    new OA\Property(property: 'task_name', type: 'string', example: 'Submit visa cancellation to GDRFA'),
+                    new OA\Property(property: 'status', type: 'string', example: 'pending'),
+                    new OA\Property(property: 'responsible_role', type: 'string', example: 'PRO'),
+                    new OA\Property(property: 'notes', type: 'string', nullable: true, example: null),
                 ]
             )
         )
@@ -63,7 +63,7 @@ class OffboardingChecklistApiController extends Controller
     // -------------------------------------------------------------------------
 
     #[OA\Post(
-        path: '/api/admin/admin/offboarding/{offboardingId}/checklists',
+        path: '/api/admin/admin/checklists/{id}',
         operationId: 'createChecklist',
         summary: 'Create a new checklist item',
         security: [['bearerAuth' => []]],
@@ -81,10 +81,10 @@ class OffboardingChecklistApiController extends Controller
         content: new OA\JsonContent(
             required: ['category_id', 'task_name'],
             properties: [
-                new OA\Property(property: 'category_id',         type: 'string', example: 'general'),
-                new OA\Property(property: 'task_name',        type: 'string', example: 'Return access card'),
+                new OA\Property(property: 'category_id', type: 'integer', example: 1),
+                new OA\Property(property: 'task_name', type: 'string', example: 'Return access card'),
                 new OA\Property(property: 'responsible_role', type: 'string', nullable: true, example: 'HR'),
-                new OA\Property(property: 'notes',            type: 'string', nullable: true, example: 'Collect from security desk'),
+                new OA\Property(property: 'notes', type: 'string', nullable: true, example: 'Collect from security desk'),
             ]
         )
     )]
@@ -94,18 +94,18 @@ class OffboardingChecklistApiController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'message', type: 'string',  example: 'Checklist created successfully'),
+                new OA\Property(property: 'message', type: 'string', example: 'Checklist created successfully'),
                 new OA\Property(
                     property: 'data',
                     type: 'object',
                     properties: [
-                        new OA\Property(property: 'id',               type: 'integer', example: 5),
-                        new OA\Property(property: 'offboarding_id',   type: 'integer', example: 1),
-                        new OA\Property(property: 'category_id',         type: 'string',  example: 'general'),
-                        new OA\Property(property: 'task_name',        type: 'string',  example: 'Return access card'),
-                        new OA\Property(property: 'status',           type: 'string',  example: 'pending'),
-                        new OA\Property(property: 'responsible_role', type: 'string',  example: 'HR'),
-                        new OA\Property(property: 'notes',            type: 'string',  nullable: true, example: null),
+                        new OA\Property(property: 'id', type: 'integer', example: 5),
+                        new OA\Property(property: 'offboarding_id', type: 'integer', example: 1),
+                        new OA\Property(property: 'category_id', type: 'integer', example: 1),
+                        new OA\Property(property: 'task_name', type: 'string', example: 'Return access card'),
+                        new OA\Property(property: 'status', type: 'string', example: 'pending'),
+                        new OA\Property(property: 'responsible_role', type: 'string', example: 'HR'),
+                        new OA\Property(property: 'notes', type: 'string', nullable: true, example: null),
                     ]
                 ),
             ]
@@ -115,25 +115,25 @@ class OffboardingChecklistApiController extends Controller
     public function store(Request $request, $offboardingId)
     {
         $request->validate([
-            'category_id'         => 'required|string',
-            'task_name'        => 'required|string',
+            'category_id' => 'required',
+            'task_name' => 'required|string',
             'responsible_role' => 'nullable|string',
-            'notes'            => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
         $checklist = OffboardingChecklist::create([
-            'offboarding_id'   => $offboardingId,
-            'category_id'         => $request->category_id,
-            'task_name'        => $request->task_name,
+            'offboarding_id' => $offboardingId,
+            'category_id' => $request->category_id,
+            'task_name' => $request->task_name,
             'responsible_role' => $request->responsible_role,
-            'notes'            => $request->notes,
-            'status'           => 'pending',
+            'notes' => $request->notes,
+            'status' => 'pending',
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Checklist created successfully',
-            'data'    => $checklist,
+            'data' => $checklist,
         ], 201);
     }
 
@@ -159,10 +159,10 @@ class OffboardingChecklistApiController extends Controller
         required: true,
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: 'category_id',         type: 'string', example: 'general'),
-                new OA\Property(property: 'task_name',        type: 'string', example: 'Return laptop'),
+                new OA\Property(property: 'category_id', type: 'integer', example: 1),
+                new OA\Property(property: 'task_name', type: 'string', example: 'Return laptop'),
                 new OA\Property(property: 'responsible_role', type: 'string', nullable: true, example: 'IT'),
-                new OA\Property(property: 'notes',            type: 'string', nullable: true, example: 'Wipe data before returning'),
+                new OA\Property(property: 'notes', type: 'string', nullable: true, example: 'Wipe data before returning'),
             ]
         )
     )]
@@ -172,18 +172,18 @@ class OffboardingChecklistApiController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'message', type: 'string',  example: 'Checklist updated successfully'),
+                new OA\Property(property: 'message', type: 'string', example: 'Checklist updated successfully'),
                 new OA\Property(
                     property: 'data',
                     type: 'object',
                     properties: [
-                        new OA\Property(property: 'id',               type: 'integer', example: 5),
-                        new OA\Property(property: 'offboarding_id',   type: 'integer', example: 1),
-                        new OA\Property(property: 'category_id',         type: 'string',  example: 'general'),
-                        new OA\Property(property: 'task_name',        type: 'string',  example: 'Return laptop'),
-                        new OA\Property(property: 'status',           type: 'string',  example: 'pending'),
-                        new OA\Property(property: 'responsible_role', type: 'string',  example: 'IT'),
-                        new OA\Property(property: 'notes',            type: 'string',  nullable: true, example: 'Wipe data before returning'),
+                        new OA\Property(property: 'id', type: 'integer', example: 5),
+                        new OA\Property(property: 'offboarding_id', type: 'integer', example: 1),
+                        new OA\Property(property: 'category_id', type: 'integer', example: 1),
+                        new OA\Property(property: 'task_name', type: 'string', example: 'Return laptop'),
+                        new OA\Property(property: 'status', type: 'string', example: 'pending'),
+                        new OA\Property(property: 'responsible_role', type: 'string', example: 'IT'),
+                        new OA\Property(property: 'notes', type: 'string', nullable: true, example: 'Wipe data before returning'),
                     ]
                 ),
             ]
@@ -205,7 +205,7 @@ class OffboardingChecklistApiController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Checklist updated successfully',
-            'data'    => $checklist,
+            'data' => $checklist,
         ]);
     }
 
@@ -247,15 +247,15 @@ class OffboardingChecklistApiController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'message', type: 'string',  example: 'Checklist status updated successfully'),
+                new OA\Property(property: 'message', type: 'string', example: 'Checklist status updated successfully'),
                 new OA\Property(
                     property: 'data',
                     type: 'object',
                     properties: [
-                        new OA\Property(property: 'id',             type: 'integer', example: 5),
+                        new OA\Property(property: 'id', type: 'integer', example: 5),
                         new OA\Property(property: 'offboarding_id', type: 'integer', example: 1),
-                        new OA\Property(property: 'task_name',      type: 'string',  example: 'Return access card'),
-                        new OA\Property(property: 'status',         type: 'string',  example: 'completed'),
+                        new OA\Property(property: 'task_name', type: 'string', example: 'Return access card'),
+                        new OA\Property(property: 'status', type: 'string', example: 'completed'),
                     ]
                 ),
             ]
@@ -276,7 +276,7 @@ class OffboardingChecklistApiController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Checklist status updated successfully',
-            'data'    => $checklist,
+            'data' => $checklist,
         ]);
     }
 
@@ -304,7 +304,7 @@ class OffboardingChecklistApiController extends Controller
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'message', type: 'string',  example: 'Checklist deleted successfully'),
+                new OA\Property(property: 'message', type: 'string', example: 'Checklist deleted successfully'),
             ]
         )
     )]

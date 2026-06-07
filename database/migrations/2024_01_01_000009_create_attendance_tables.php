@@ -19,6 +19,7 @@ return new class extends Migration
             $table->integer('status')->nullable();
             $table->string('device_id')->nullable();
             $table->enum('log_status', ['in', 'out'])->nullable();
+            $table->enum('attendance_status', ['present', 'absent', 'late', 'early_out', 'half_day', 'wfh'])->nullable();
             $table->decimal('punch_in_latitude', 10, 8)->nullable();
             $table->decimal('punch_in_longitude', 11, 8)->nullable();
             $table->text('punch_in_address')->nullable();

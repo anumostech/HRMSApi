@@ -333,6 +333,509 @@
                 }
             }
         },
+        "/api/admin/attendance": {
+            "get": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get attendance summary with stats",
+                "description": "Retrieves attendance records with optional filtering by company, employee name, and date preset.",
+                "operationId": "getAttendanceSummary",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "description": "Filter by Company ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "employee_name",
+                        "in": "query",
+                        "description": "Filter by Employee Name",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "date_preset",
+                        "in": "query",
+                        "description": "Date preset filter",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "all",
+                            "enum": [
+                                "all",
+                                "today",
+                                "yesterday",
+                                "last_week",
+                                "last_month",
+                                "custom"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from_date",
+                        "in": "query",
+                        "description": "From date for custom preset",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to_date",
+                        "in": "query",
+                        "description": "To date for custom preset",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Manually add attendance for an employee",
+                "description": "Creates a manual attendance log entry for a specific employee on a given date.",
+                "operationId": "storeAttendance",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "userid",
+                                    "log_date",
+                                    "punch_in"
+                                ],
+                                "properties": {
+                                    "userid": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "company_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "log_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-07"
+                                    },
+                                    "punch_in": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-06-07 09:00:00"
+                                    },
+                                    "punch_out": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-06-07 18:00:00",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Attendance manually added successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Attendance manually added successfully."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attendance/upload": {
+            "post": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Upload attendance file",
+                "description": "Uploads a file (.dat, .csv, .txt) containing attendance records. Excels and CSVs are processed directly; .dat and .txt files are queued.",
+                "operationId": "uploadAttendance",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "description": "Attendance file",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Upload successful or processing started"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attendance/upload-status/{id}": {
+            "get": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Check attendance upload progress",
+                "description": "Retrieves the current processing status and progress for a queued attendance file upload.",
+                "operationId": "uploadStatus",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Upload ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Upload status retrieved"
+                    },
+                    "404": {
+                        "description": "Upload record not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attendance/punch-in-today": {
+            "get": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get employees who punched in today",
+                "description": "Retrieves attendance logs for employees who punched in today before 12:00 PM.",
+                "operationId": "punchInToday",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of today punch-ins"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attendance/punch-in-yesterday": {
+            "get": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get employees who punched in yesterday",
+                "description": "Retrieves attendance logs for employees who punched in yesterday before 12:00 PM.",
+                "operationId": "punchInYesterday",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of yesterday punch-ins"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attendance/punch-out-today": {
+            "get": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get employees who punched out today",
+                "description": "Retrieves attendance logs for employees who punched out today at or after 12:00 PM.",
+                "operationId": "punchOutToday",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of today punch-outs"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attendance/late-comers": {
+            "get": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get employees who came late",
+                "description": "Retrieves employees who punched in after 08:10:59 AM.",
+                "operationId": "lateComers",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "date_preset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "today"
+                        }
+                    },
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "from_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of late comers"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attendance/absentees": {
+            "get": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get absent employees",
+                "description": "Retrieves list of active employees who do not have an attendance log for a given date.",
+                "operationId": "absentees",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Date to check for absentees (defaults to today)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of absentees"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/admin/offboarding": {
             "get": {
                 "tags": [
@@ -1380,7 +1883,7 @@
                 ]
             }
         },
-        "/api/admin/admin/offboarding/{offboardingId}/checklists": {
+        "/api/admin/admin/checklists/{id}": {
             "get": {
                 "tags": [
                     "Offboarding Checklist"
@@ -1417,8 +1920,8 @@
                                                 "example": 1
                                             },
                                             "category_id": {
-                                                "type": "string",
-                                                "example": "visa_cancellation"
+                                                "type": "integer",
+                                                "example": 1
                                             },
                                             "task_name": {
                                                 "type": "string",
@@ -1454,125 +1957,6 @@
                     }
                 ]
             },
-            "post": {
-                "tags": [
-                    "Offboarding Checklist"
-                ],
-                "summary": "Create a new checklist item",
-                "operationId": "createChecklist",
-                "parameters": [
-                    {
-                        "name": "offboardingId",
-                        "in": "path",
-                        "description": "Offboarding ID",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "example": 1
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "category_id",
-                                    "task_name"
-                                ],
-                                "properties": {
-                                    "category_id": {
-                                        "type": "string",
-                                        "example": "general"
-                                    },
-                                    "task_name": {
-                                        "type": "string",
-                                        "example": "Return access card"
-                                    },
-                                    "responsible_role": {
-                                        "type": "string",
-                                        "example": "HR",
-                                        "nullable": true
-                                    },
-                                    "notes": {
-                                        "type": "string",
-                                        "example": "Collect from security desk",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Checklist item created successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Checklist created successfully"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "id": {
-                                                    "type": "integer",
-                                                    "example": 5
-                                                },
-                                                "offboarding_id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "category_id": {
-                                                    "type": "string",
-                                                    "example": "general"
-                                                },
-                                                "task_name": {
-                                                    "type": "string",
-                                                    "example": "Return access card"
-                                                },
-                                                "status": {
-                                                    "type": "string",
-                                                    "example": "pending"
-                                                },
-                                                "responsible_role": {
-                                                    "type": "string",
-                                                    "example": "HR"
-                                                },
-                                                "notes": {
-                                                    "type": "string",
-                                                    "example": null,
-                                                    "nullable": true
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/admin/admin/checklists/{id}": {
             "put": {
                 "tags": [
                     "Offboarding Checklist"
@@ -1598,8 +1982,8 @@
                             "schema": {
                                 "properties": {
                                     "category_id": {
-                                        "type": "string",
-                                        "example": "general"
+                                        "type": "integer",
+                                        "example": 1
                                     },
                                     "task_name": {
                                         "type": "string",
@@ -1647,8 +2031,8 @@
                                                     "example": 1
                                                 },
                                                 "category_id": {
-                                                    "type": "string",
-                                                    "example": "general"
+                                                    "type": "integer",
+                                                    "example": 1
                                                 },
                                                 "task_name": {
                                                     "type": "string",
@@ -1678,6 +2062,123 @@
                     },
                     "404": {
                         "description": "Checklist item not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Offboarding Checklist"
+                ],
+                "summary": "Create a new checklist item",
+                "operationId": "createChecklist",
+                "parameters": [
+                    {
+                        "name": "offboardingId",
+                        "in": "path",
+                        "description": "Offboarding ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "category_id",
+                                    "task_name"
+                                ],
+                                "properties": {
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "task_name": {
+                                        "type": "string",
+                                        "example": "Return access card"
+                                    },
+                                    "responsible_role": {
+                                        "type": "string",
+                                        "example": "HR",
+                                        "nullable": true
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Collect from security desk",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Checklist item created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Checklist created successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "offboarding_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "category_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "task_name": {
+                                                    "type": "string",
+                                                    "example": "Return access card"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "pending"
+                                                },
+                                                "responsible_role": {
+                                                    "type": "string",
+                                                    "example": "HR"
+                                                },
+                                                "notes": {
+                                                    "type": "string",
+                                                    "example": null,
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Validation error"
@@ -2253,6 +2754,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Attendance",
+            "description": "Endpoints for managing employee attendance"
+        },
         {
             "name": "Offboarding",
             "description": "Endpoints for managing the employee offboarding lifecycle"

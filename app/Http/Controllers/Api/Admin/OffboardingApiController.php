@@ -140,7 +140,9 @@ class OffboardingApiController extends ApiController
         $offboarding = Offboarding::updateOrCreate(
             ['employee_id' => $employee->id],
             [
-                'status'             => $request->boolean('is_draft') ? 'draft' : 'pending_visa',
+                'status'             => $request->boolean('is_draft') 
+                                            ? 'draft' 
+                                            : ($request->visa_sponsorship === 'non-applicable' ? 'pending_checklist' : 'pending_visa'),
                 'last_working_day'   => $request->last_working_day,
                 'separation_type'    => $request->separation_type,
                 'notice_period_days' => $request->notice_period_days,
@@ -296,7 +298,7 @@ class OffboardingApiController extends ApiController
     {
         $offboarding = Offboarding::with([
             'employee',
-            'checklists' => fn ($q) => $q->where('category_id', 'visa_cancellation'),
+            'checklists' => fn($q) => $q->where('category_id', 1),
         ])->find($id);
 
         if (!$offboarding) {
@@ -853,9 +855,9 @@ class OffboardingApiController extends ApiController
     {
         $offboarding = Offboarding::with([
             'checklists',
-            'assets',
             'interview',
             'settlement',
+            'assets',
             'letters',
         ])->find($id);
 
@@ -918,13 +920,6 @@ class OffboardingApiController extends ApiController
                     : ($offboarding->status === 'pending_checklist' ? 'in_progress' : 'pending'),
             ],
             [
-                'name'   => 'Asset Return',
-                'key'    => 'assets',
-                'status' => $this->isAssetsReturned($offboarding)
-                    ? 'completed'
-                    : ($offboarding->status === 'pending_assets' ? 'in_progress' : 'pending'),
-            ],
-            [
                 'name'   => 'Exit Interview',
                 'key'    => 'interview',
                 'status' => $this->isInterviewCompleted($offboarding)
@@ -945,6 +940,13 @@ class OffboardingApiController extends ApiController
                     ? 'completed'
                     : ($offboarding->status === 'pending_letters' ? 'in_progress' : 'pending'),
             ],
+            [
+                'name'   => 'Asset Return',
+                'key'    => 'assets',
+                'status' => $this->isAssetsReturned($offboarding)
+                    ? 'completed'
+                    : ($offboarding->status === 'pending_assets' ? 'in_progress' : 'pending'),
+            ]
         ];
     }
 

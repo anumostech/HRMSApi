@@ -109,6 +109,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
 
     // Attendance
     Route::get('attendance', [AttendanceApiController::class, 'index'])->middleware('permission:attendance.read');
+    Route::post('attendance', [AttendanceApiController::class, 'store'])->middleware('permission:attendance.edit');
     Route::post('attendance/upload', [AttendanceApiController::class, 'upload'])->middleware('permission:attendance.edit');
     Route::get('attendance/upload-status/{id}', [AttendanceApiController::class, 'uploadStatus'])->middleware('permission:attendance.read');
     Route::get('attendance/punch-in-today', [AttendanceApiController::class, 'punchInToday'])->middleware('permission:attendance.read');
@@ -208,23 +209,23 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
         Route::post('/{id}/settlement', [OffboardingApiController::class, 'updateSettlement']);
         Route::post('/{id}/letters', [OffboardingApiController::class, 'generateLetters']);
         Route::get('/{id}/progress', [OffboardingApiController::class, 'getProgress']);
+    });
 
-        //Checklists
-        Route::prefix('checklists')->group(function () {
+    //Checklists
+    Route::prefix('checklists')->group(function () {
+        Route::get('/{id}', [OffboardingChecklistApiController::class, 'index']);
+        Route::post('/{id}', [OffboardingChecklistApiController::class, 'store']);
+        Route::put('/item/{id}', [OffboardingChecklistApiController::class, 'update']);
+        Route::patch('/item/{id}/status', [OffboardingChecklistApiController::class, 'updateStatus']);
+        Route::delete('/item/{id}', [OffboardingChecklistApiController::class, 'destroy']);
+    });
 
-            Route::get('/{id}', [OffboardingChecklistApiController::class, 'index']);
-            Route::post('/{id}', [OffboardingChecklistApiController::class, 'store']);
-            Route::put('/item/{id}', [OffboardingChecklistApiController::class, 'update']);
-            Route::patch('/item/{id}/status', [OffboardingChecklistApiController::class, 'updateStatus']);
-            Route::delete('/item/{id}', [OffboardingChecklistApiController::class, 'destroy']);
-            Route::prefix('categories')->group(function () {
-                Route::get('/', [OffboardingChecklistCategoryController::class, 'index']);
-                Route::post('/', [OffboardingChecklistCategoryController::class, 'store']);
-                Route::get('/{id}', [OffboardingChecklistCategoryController::class, 'show']);
-                Route::put('/{id}', [OffboardingChecklistCategoryController::class, 'update']);
-                Route::delete('/{id}', [OffboardingChecklistCategoryController::class, 'destroy']);
-            });
-        });
+    Route::prefix('checklist-categories')->group(function () {
+        Route::get('/', [OffboardingChecklistCategoryController::class, 'index']);
+        Route::post('/', [OffboardingChecklistCategoryController::class, 'store']);
+        Route::get('/{id}', [OffboardingChecklistCategoryController::class, 'show']);
+        Route::put('/{id}', [OffboardingChecklistCategoryController::class, 'update']);
+        Route::delete('/{id}', [OffboardingChecklistCategoryController::class, 'destroy']);
     });
 
     // Asset Management

@@ -8,6 +8,7 @@ use App\Models\TaskReport;
 use App\Models\WfhRequest;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Models\LeaveAllocation;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,7 +25,7 @@ class EmployeePortalApiController extends ApiController
         if (!$user)
             return $this->error('Unauthorized', 401);
 
-        $employee = $user->employee;
+        $employee = $user;
         if (!$employee)
             return $this->error('Employee profile not found', 404);
 
@@ -76,7 +77,7 @@ class EmployeePortalApiController extends ApiController
         }
 
         return $this->success([
-            'employee' => $employee,
+            'employee' => $user->employee,
             'today_attendance' => [
                 'punched_in' => (bool) $attendance,
                 'punched_out' => $attendance && $attendance->punch_out,
@@ -242,47 +243,45 @@ class EmployeePortalApiController extends ApiController
     public function leaves(): JsonResponse
     {
         $user = auth('api')->user();
-        $employee = $user ? $user->employee : null;
+        $employee = $user ? $user : null;
         if (!$employee)
             return $this->error('Employee profile not found', 404);
 
         $leaves = LeaveRequest::with('leaveType')->where('employee_id', $employee->id)->latest()->get();
-        return $this->success($leaves);
+        return $this->success([
+            'leaves' => $leaves
+        ]);
     }
 
     public function leaveTypesAndBalance(): JsonResponse
     {
         $user = auth('api')->user();
-        $employee = $user ? $user->employee : null;
+        $employee = $user ? $user : null;
         if (!$employee)
             return $this->error('Employee profile not found', 404);
 
         $leaveTypes = LeaveType::where('status', true)->get();
-
         $currentYear = date('Y');
-        $allocations = \App\Models\LeaveAllocation::where('employee_id', $employee->id)
-            ->where('year', $currentYear)
-            ->get()
-            ->keyBy('leave_type_id');
-
-        // Get all approved/pending leave requests for this employee grouped by type
-        $leaveRequests = LeaveRequest::where('employee_id', $employee->id)
-            ->whereIn('status', ['approved', 'pending'])
-            ->selectRaw('leave_type_id, status, SUM(duration_days) as total_days')
-            ->groupBy('leave_type_id', 'status')
-            ->get()
-            ->groupBy('leave_type_id');
 
         $totalAllocated = 0;
         $totalTaken = 0;
         $totalBalance = 0;
 
-        $leaveTypesData = $leaveTypes->map(function ($leaveType) use ($leaveRequests, $allocations, &$totalAllocated, &$totalTaken, &$totalBalance) {
-            $typeRequests = $leaveRequests->get($leaveType->id, collect());
-            $allocation = $allocations->get($leaveType->id);
+        $leaveTypesData = $leaveTypes->map(function ($leaveType) use ($employee, $currentYear, &$totalAllocated, &$totalTaken, &$totalBalance) {
+            $allocation = LeaveAllocation::where('employee_id', $employee->id)
+                ->where('leave_type_id', $leaveType->id)
+                ->where('year', $currentYear)
+                ->first();
 
-            $taken = (float) optional($typeRequests->firstWhere('status', 'approved'))->total_days ?? 0;
-            $pending = (float) optional($typeRequests->firstWhere('status', 'pending'))->total_days ?? 0;
+            $taken = (float) LeaveRequest::where('employee_id', $employee->id)
+                ->where('leave_type_id', $leaveType->id)
+                ->where('status', 'approved')
+                ->sum('duration_days');
+
+            $pending = (float) LeaveRequest::where('employee_id', $employee->id)
+                ->where('leave_type_id', $leaveType->id)
+                ->where('status', 'pending')
+                ->sum('duration_days');
 
             $allocated = $allocation ? (float) $allocation->allocated_days : 0;
             $balance = $allocated - $taken;
@@ -322,11 +321,11 @@ class EmployeePortalApiController extends ApiController
         ]);
 
         $user = auth('api')->user();
-        $employee = $user ? $user->employee : null;
+        $employee = $user ? $user : null;
         if (!$employee)
             return $this->error('Employee profile not found', 404);
 
-        $leaveType = \App\Models\LeaveType::find($request->leave_type_id);
+        $leaveType = LeaveType::find($request->leave_type_id);
 
         // Check for sick leave document
         if (str_contains(strtolower($leaveType->name), 'sick') && !$request->hasFile('document')) {
@@ -340,7 +339,7 @@ class EmployeePortalApiController extends ApiController
 
         // Balance check
         $currentYear = date('Y');
-        $allocation = \App\Models\LeaveAllocation::where('employee_id', $employee->id)
+        $allocation = LeaveAllocation::where('employee_id', $employee->id)
             ->where('leave_type_id', $request->leave_type_id)
             ->where('year', $currentYear)
             ->first();

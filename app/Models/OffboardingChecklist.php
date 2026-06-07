@@ -11,7 +11,7 @@ class OffboardingChecklist extends Model
 
     protected $fillable = [
         'offboarding_id',
-        'category',
+        'category_id',
         'task_name',
         'status',
         'responsible_role',
