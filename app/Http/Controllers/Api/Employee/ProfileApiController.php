@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileApiController extends ApiController
 {
@@ -46,49 +47,75 @@ class ProfileApiController extends ApiController
     public function updateProfile(Request $request): JsonResponse
     {
         $user = auth('api')->user();
-        if (!$user)
+
+        if (!$user) {
             return $this->error('Unauthorized', 401);
+        }
 
         $request->validate([
             'username' => 'nullable|string|max:255|unique:users,username,' . $user->id,
-            'email'    => 'nullable|email|max:255|unique:users,email,' . $user->id,
-            'avatar'   => 'nullable|string|starts_with:temp/',
+            'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
+
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'personal_email' => 'nullable|email|max:255',
+            'phone_number' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
+
+            'avatar' => 'nullable|string|starts_with:temp/',
         ]);
 
-        // Update user fields (no avatar here)
-        $userData = $request->only('username', 'email');
-        $user->update($userData);
+        // Update users table
+        $user->update(
+            $request->only('username', 'email')
+        );
 
-        // Handle avatar — store in employees table
-        if ($request->hasFile('avatar')) {
-            $employee = $user->employee;
+        $employee = $user->employee;
 
-            if ($employee) {
-                // Delete old avatar if exists
+        if ($employee) {
+
+            // Update employee table
+            $employee->update([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'personal_email' => $request->personal_email,
+                'personal_number' => $request->phone_number,
+                'address' => $request->address,
+            ]);
+
+            // Avatar upload
+            if ($request->hasFile('avatar')) {
+
                 if ($employee->avatar) {
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($employee->avatar);
+                    Storage::disk('public')->delete($employee->avatar);
                 }
 
                 $path = $request->file('avatar')->store('avatars', 'public');
-                $employee->update(['avatar' => $path]);
-            }
-        } elseif ($request->filled('avatar') && str_starts_with($request->input('avatar'), 'temp/')) {
-            $employee = $user->employee;
-            
-            if ($employee) {
+
+                $employee->update([
+                    'avatar' => $path
+                ]);
+            } elseif (
+                $request->filled('avatar') &&
+                str_starts_with($request->input('avatar'), 'temp/')
+            ) {
+
                 $tempPath = $request->input('avatar');
-                
-                if (\Illuminate\Support\Facades\Storage::disk('public')->exists($tempPath)) {
-                    // Delete old avatar if exists
+
+                if (Storage::disk('public')->exists($tempPath)) {
+
                     if ($employee->avatar) {
-                        \Illuminate\Support\Facades\Storage::disk('public')->delete($employee->avatar);
+                        Storage::disk('public')->delete($employee->avatar);
                     }
-                    
+
                     $fileName = basename($tempPath);
                     $newPath = 'avatars/' . $fileName;
-                    
-                    \Illuminate\Support\Facades\Storage::disk('public')->move($tempPath, $newPath);
-                    $employee->update(['avatar' => $newPath]);
+
+                    Storage::disk('public')->move($tempPath, $newPath);
+
+                    $employee->update([
+                        'avatar' => $newPath
+                    ]);
                 }
             }
         }

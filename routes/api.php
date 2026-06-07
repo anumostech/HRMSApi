@@ -89,7 +89,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     Route::put('employees/{employee}', [EmployeeApiController::class, 'update'])->middleware('permission:employees.edit');
     Route::delete('employees/{employee}', [EmployeeApiController::class, 'destroy'])->middleware('permission:employees.delete');
 
-    Route::post('employees/upload-temp', [EmployeeApiController::class, 'uploadTemp'])->middleware('permission:employees.edit');
+    Route::post('employees/upload-temp', [EmployeeApiController::class, 'uploadTemp']);
     Route::post('employees/{employee}/update-status', [EmployeeApiController::class, 'updateStatus'])->middleware('permission:employees.edit');
 
     // Onboarding
@@ -110,6 +110,8 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'admin'], function () {
     // Attendance
     Route::get('attendance', [AttendanceApiController::class, 'index'])->middleware('permission:attendance.read');
     Route::post('attendance', [AttendanceApiController::class, 'store'])->middleware('permission:attendance.edit');
+    Route::put('attendance/{id}', [AttendanceApiController::class, 'update'])->middleware('permission:attendance.edit');
+    Route::delete('attendance/{id}', [AttendanceApiController::class, 'destroy'])->middleware('permission:attendance.delete');
     Route::post('attendance/upload', [AttendanceApiController::class, 'upload'])->middleware('permission:attendance.edit');
     Route::get('attendance/upload-status/{id}', [AttendanceApiController::class, 'uploadStatus'])->middleware('permission:attendance.read');
     Route::get('attendance/punch-in-today', [AttendanceApiController::class, 'punchInToday'])->middleware('permission:attendance.read');

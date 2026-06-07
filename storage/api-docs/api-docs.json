@@ -523,6 +523,113 @@
                 ]
             }
         },
+        "/api/admin/attendance/{id}": {
+            "put": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Update an existing attendance log",
+                "description": "Updates attendance log details for an employee.",
+                "operationId": "updateAttendance",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Attendance Log ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "company_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "log_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-07"
+                                    },
+                                    "punch_in": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-06-07 09:00:00"
+                                    },
+                                    "punch_out": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-06-07 18:00:00",
+                                        "nullable": true
+                                    },
+                                    "attendance_status": {
+                                        "type": "string",
+                                        "example": "present",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Attendance updated successfully"
+                    },
+                    "404": {
+                        "description": "Attendance record not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Delete an attendance log",
+                "description": "Deletes a specific attendance log.",
+                "operationId": "deleteAttendance",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Attendance Log ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Attendance deleted successfully"
+                    },
+                    "404": {
+                        "description": "Attendance record not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/admin/attendance/upload": {
             "post": {
                 "tags": [

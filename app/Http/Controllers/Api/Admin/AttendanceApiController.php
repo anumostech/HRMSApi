@@ -44,7 +44,7 @@ class AttendanceApiController extends ApiController
     #[OA\Response(response: 200, description: 'Successful operation', content: new OA\JsonContent(properties: [new OA\Property(property: 'success', type: 'boolean', example: true), new OA\Property(property: 'data', type: 'object')]))]
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->get('per_page', 15);
+        $perPage = $request->get('per_page', 100);
         $companyId = $request->get('company_id');
         $employeeName = $request->get('employee_name');
         $datePreset = $request->get('date_preset', 'all');
@@ -53,6 +53,7 @@ class AttendanceApiController extends ApiController
             ->select(
                 'company_id',
                 'userid',
+                'attendance_status',
                 'log_date',
                 DB::raw("MIN(punch_in) as punch_in"),
                 DB::raw("MAX(punch_out) as punch_out")
@@ -74,7 +75,7 @@ class AttendanceApiController extends ApiController
         }
 
 
-        $attendance = $query->groupBy('company_id', 'userid', 'log_date')
+        $attendance = $query->groupBy('company_id', 'userid', 'log_date', 'attendance_status')
             ->orderBy('log_date', 'desc')
             ->paginate($perPage);
 
@@ -149,6 +150,91 @@ class AttendanceApiController extends ApiController
         } catch (\Exception $e) {
             Log::error('Attendance Manual Entry Error: ' . $e->getMessage());
             return $this->error('Failed to add attendance: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Update Attendance Log
+     */
+    #[OA\Put(
+        path: '/api/admin/attendance/{id}',
+        operationId: 'updateAttendance',
+        summary: 'Update an existing attendance log',
+        description: 'Updates attendance log details for an employee.',
+        security: [['bearerAuth' => []]],
+        tags: ['Attendance']
+    )]
+    #[OA\Parameter(name: 'id', in: 'path', required: true, description: 'Attendance Log ID', schema: new OA\Schema(type: 'integer'))]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'company_id', type: 'integer', nullable: true, example: 1),
+                new OA\Property(property: 'log_date', type: 'string', format: 'date', example: '2026-06-07'),
+                new OA\Property(property: 'punch_in', type: 'string', format: 'date-time', example: '2026-06-07 09:00:00'),
+                new OA\Property(property: 'punch_out', type: 'string', format: 'date-time', nullable: true, example: '2026-06-07 18:00:00'),
+                new OA\Property(property: 'attendance_status', type: 'string', nullable: true, example: 'present')
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: 'Attendance updated successfully')]
+    #[OA\Response(response: 404, description: 'Attendance record not found')]
+    #[OA\Response(response: 422, description: 'Validation error')]
+    public function update(Request $request, $id): JsonResponse
+    {
+        try {
+            $attendance = AttendanceLog::find($id);
+            if (!$attendance) {
+                return $this->error('Attendance record not found', 404);
+            }
+
+            $request->validate([
+                'company_id' => 'nullable|exists:companies,id',
+                'log_date' => 'sometimes|required|date',
+                'punch_in' => 'sometimes|required|date_format:Y-m-d H:i:s',
+                'punch_out' => 'nullable|date_format:Y-m-d H:i:s|after_or_equal:punch_in',
+                'attendance_status' => 'nullable|in:present,absent,late,early_out,half_day,wfh'
+            ]);
+
+            $attendance->update($request->only(['company_id', 'log_date', 'punch_in', 'punch_out', 'attendance_status']));
+
+            return $this->success($attendance, 'Attendance updated successfully.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->error($e->getMessage(), 422, $e->errors());
+        } catch (\Exception $e) {
+            Log::error('Attendance Update Error: ' . $e->getMessage());
+            return $this->error('Failed to update attendance: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Delete Attendance Log
+     */
+    #[OA\Delete(
+        path: '/api/admin/attendance/{id}',
+        operationId: 'deleteAttendance',
+        summary: 'Delete an attendance log',
+        description: 'Deletes a specific attendance log.',
+        security: [['bearerAuth' => []]],
+        tags: ['Attendance']
+    )]
+    #[OA\Parameter(name: 'id', in: 'path', required: true, description: 'Attendance Log ID', schema: new OA\Schema(type: 'integer'))]
+    #[OA\Response(response: 200, description: 'Attendance deleted successfully')]
+    #[OA\Response(response: 404, description: 'Attendance record not found')]
+    public function destroy($id): JsonResponse
+    {
+        try {
+            $attendance = AttendanceLog::find($id);
+            if (!$attendance) {
+                return $this->error('Attendance record not found', 404);
+            }
+
+            $attendance->delete();
+
+            return $this->success(null, 'Attendance deleted successfully.');
+        } catch (\Exception $e) {
+            Log::error('Attendance Delete Error: ' . $e->getMessage());
+            return $this->error('Failed to delete attendance: ' . $e->getMessage(), 500);
         }
     }
 
