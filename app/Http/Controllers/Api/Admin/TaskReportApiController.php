@@ -22,7 +22,7 @@ class TaskReportApiController extends ApiController
         $toDate = $request->get('to_date');
         $search = $request->get('search');
 
-        $query = TaskReport::with(['employee.user.company', 'employee.user.department', 'employee.user.designation']);
+        $query = TaskReport::with(['user.company', 'user.department', 'user.designation', 'user.employee']);
 
         if ($employeeId && $employeeId !== 'all') {
             $query->where('employee_id', $employeeId);
@@ -35,7 +35,7 @@ class TaskReportApiController extends ApiController
         }
 
         if ($search) {
-            $query->whereHas('employee', function ($q) use ($search) {
+            $query->whereHas('user', function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('employee_id', 'like', "%{$search}%");
@@ -53,7 +53,7 @@ class TaskReportApiController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_id' => 'required|exists:users,id',
             'date' => 'required|date',
             'tasks_completed' => 'required|string',
             'plan_tomorrow' => 'required|string',
@@ -65,7 +65,7 @@ class TaskReportApiController extends ApiController
             $request->only(['tasks_completed', 'plan_tomorrow', 'remarks'])
         );
 
-        return $this->success($report->load('employee.user'), 'Task report saved successfully', $report->wasRecentlyCreated ? 201 : 200);
+        return $this->success($report->load('user'), 'Task report saved successfully', $report->wasRecentlyCreated ? 201 : 200);
     }
 
     /**
@@ -73,7 +73,7 @@ class TaskReportApiController extends ApiController
      */
     public function show(TaskReport $taskReport): JsonResponse
     {
-        return $this->success($taskReport->load(['employee.user.company', 'employee.user.department', 'employee.user.designation']));
+        return $this->success($taskReport->load(['user.company', 'user.department', 'user.designation']));
     }
 
     /**
@@ -82,16 +82,16 @@ class TaskReportApiController extends ApiController
     public function update(Request $request, TaskReport $taskReport): JsonResponse
     {
         $request->validate([
-            'tasks_completed' => 'required|string',
-            'plan_tomorrow' => 'required|string',
+            'tasks_completed' => 'nullable|string',
+            'plan_tomorrow' => 'nullable|string',
             'remarks' => 'nullable|string',
             'date' => 'nullable|date',
-            'employee_id' => 'nullable|exists:employees,id'
+            'employee_id' => 'nullable|exists:users,id'
         ]);
 
         $taskReport->update($request->all());
 
-        return $this->success($taskReport->load('employee.user'), 'Task report updated successfully');
+        return $this->success($taskReport->load('user'), 'Task report updated successfully');
     }
 
     /**

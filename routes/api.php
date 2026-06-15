@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\Admin\OffboardingChecklistCategoryController;
 Route::group(['prefix' => 'auth'], function () {
     Route::post('login', [LoginController::class, 'login']);
     Route::post('logout', [LoginController::class, 'logout'])->middleware('auth:api');
+    Route::post('refresh', [LoginController::class, 'refresh'])->middleware('auth:api');
     Route::get('me', [LoginController::class, 'me'])->middleware('auth:api');
     Route::get('me/permissions', [LoginController::class, 'getMyPermissions'])->middleware('auth:api');
     Route::get('me/sidebar-modules', [LoginController::class, 'getMySidebarModules'])->middleware('auth:api');
@@ -250,6 +251,8 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'employee'], function () {
     Route::get('dashboard', [EmployeePortalApiController::class, 'dashboard']);
     Route::post('punch-in', [EmployeePortalApiController::class, 'punchIn']);
     Route::post('punch-out', [EmployeePortalApiController::class, 'punchOut']);
+    Route::post('break/start', [EmployeePortalApiController::class, 'startBreak']);
+    Route::post('break/end', [EmployeePortalApiController::class, 'endBreak']);
 
     // Leaves
     Route::get('leaves', [EmployeePortalApiController::class, 'leaves']);

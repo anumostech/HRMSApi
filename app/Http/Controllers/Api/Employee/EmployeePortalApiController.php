@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Employee;
 
 use App\Http\Controllers\Api\ApiController;
 use App\Models\AttendanceLog;
+use App\Models\AttendanceBreak;
 use App\Models\TaskReport;
 use App\Models\WfhRequest;
 use App\Models\LeaveRequest;
@@ -36,17 +37,98 @@ class EmployeePortalApiController extends ApiController
         // Attendance stats for today
         $attendance = AttendanceLog::where('userid', $user->id)
             ->whereDate('log_date', $today)
-            ->select('punch_in', 'punch_out', 'punch_in_latitude', 'punch_in_longitude', 'punch_in_address', 'punch_out_latitude', 'punch_out_longitude', 'punch_out_address')
+            ->with('breaks')
+            ->select('id', 'punch_in', 'punch_out', 'punch_in_latitude', 'punch_in_longitude', 'punch_in_address', 'punch_out_latitude', 'punch_out_longitude', 'punch_out_address', 'working_hours')
             ->first();
+
+        // ↓ Store raw punch_out status BEFORE formatting
+        $isPunchedOut = $attendance && !is_null($attendance->punch_out);
+
+        $isOnBreak = false;
+        $totalBreakMinutes = 0;
+        $breaksList = [];
+        $tz = config('app.timezone', 'Asia/Dubai');
+
+        if ($attendance) {
+            foreach ($attendance->breaks as $b) {
+                if ($b->end_time) {
+                    $totalBreakMinutes += $b->duration_minutes;
+                } else {
+                    $isOnBreak = true;
+                }
+                $breaksList[] = [
+                    'start_time' => $b->start_time ? Carbon::parse($b->start_time)->setTimezone($tz)->format('h:i A') : null,
+                    'end_time' => $b->end_time ? Carbon::parse($b->end_time)->setTimezone($tz)->format('h:i A') : null,
+                    'duration_minutes' => $b->duration_minutes,
+                ];
+            }
+
+            $attendance->punch_in = $attendance->punch_in
+                ? Carbon::parse($attendance->punch_in)->setTimezone($tz)->format('h:i A')
+                : '--';
+
+            $attendance->punch_out = $attendance->punch_out
+                ? Carbon::parse($attendance->punch_out)->setTimezone($tz)->format('h:i A')
+                : '--';
+
+            // Format working_hours → "8 hrs 30 mins"
+            $minutes = $attendance->working_hours ?? 0;
+            $hours   = intdiv($minutes, 60);
+            $mins    = $minutes % 60;
+
+            if ($minutes == 0) {
+                $attendance->working_hours = '--';
+            } elseif ($hours == 0) {
+                $attendance->working_hours = "{$mins} mins";
+            } elseif ($mins == 0) {
+                $attendance->working_hours = "{$hours} hrs";
+            } else {
+                $attendance->working_hours = "{$hours} hrs {$mins} mins";
+            }
+
+        }
 
         // 30-day attendance history
         $from = Carbon::now()->subDays(30)->startOfDay();
         $to = Carbon::now()->endOfDay();
         $attendanceHistory = AttendanceLog::where('userid', $user->id)
             ->whereBetween('log_date', [$from, $to])
-            ->select('log_date', 'punch_in', 'punch_out', 'punch_in_latitude', 'punch_in_longitude', 'punch_in_address', 'punch_out_latitude', 'punch_out_longitude', 'punch_out_address')
+            ->select('log_date', 'punch_in', 'punch_out', 'punch_in_latitude', 'punch_in_longitude', 'punch_in_address', 'punch_out_latitude', 'punch_out_longitude', 'punch_out_address', 'working_hours')
             ->orderByDesc('log_date')
             ->get();
+        if ($attendanceHistory) {
+            $attendanceHistory->transform(function ($log) {
+                $tz = config('app.timezone', 'Asia/Kolkata');
+
+                $log->log_date = $log->log_date
+                    ? Carbon::parse($log->log_date)->format('d/m/Y')
+                    : '--';
+
+                $log->punch_in = $log->punch_in
+                    ? Carbon::parse($log->punch_in)->setTimezone($tz)->format('h:i A')
+                    : '--';
+
+                $log->punch_out = $log->punch_out
+                    ? Carbon::parse($log->punch_out)->setTimezone($tz)->format('h:i A')
+                    : '--';
+
+                // Format working_hours → "8 hrs 30 mins"
+                $minutes = $log->working_hours ?? 0;
+                $hours = intdiv($minutes, 60);
+                $mins = $minutes % 60;
+
+                if ($minutes == 0)
+                    $log->working_hours = '--';
+                elseif ($hours == 0)
+                    $log->working_hours = "{$mins} mins";
+                elseif ($mins == 0)
+                    $log->working_hours = "{$hours} hrs";
+                else
+                    $log->working_hours = "{$hours} hrs {$mins} mins";
+
+                return $log;
+            });
+        }
 
         // Leave stats
         $totalLeavesTaken = LeaveRequest::where('employee_id', $employee->id)
@@ -80,7 +162,10 @@ class EmployeePortalApiController extends ApiController
             'employee' => $user->employee,
             'today_attendance' => [
                 'punched_in' => (bool) $attendance,
-                'punched_out' => $attendance && $attendance->punch_out,
+                'punched_out' => $isPunchedOut,
+                'is_on_break' => $isOnBreak,
+                'total_break_minutes' => $totalBreakMinutes,
+                'breaks' => $breaksList,
                 'punch_in_time' => $attendance ? $attendance->punch_in : null,
                 'punch_out_time' => $attendance ? $attendance->punch_out : null,
                 'punch_in_location' => [          // ← ADD THIS
@@ -92,7 +177,8 @@ class EmployeePortalApiController extends ApiController
                     'latitude' => $attendance ? $attendance->punch_out_latitude : null,
                     'longitude' => $attendance ? $attendance->punch_out_longitude : null,
                     'address' => $attendance ? $attendance->punch_out_address : null
-                ]
+                ],
+                'working_hours' => $attendance ? $attendance->working_hours : '--'
             ],
             'leave_stats' => [
                 'total_taken' => (float) $totalLeavesTaken,
@@ -112,9 +198,10 @@ class EmployeePortalApiController extends ApiController
     public function punchIn(Request $request): JsonResponse
     {
         $request->validate([
-            'location.latitude' => 'nullable|numeric',
-            'location.longitude' => 'nullable|numeric',
-            'location.address' => 'nullable|string'
+            'punch_in_latitude' => 'nullable|numeric',
+            'punch_in_longitude' => 'nullable|numeric',
+            'punch_in_address' => 'nullable|string',
+            'timezone' => 'nullable|string|timezone'
         ]);
         $user = auth('api')->user();
         $employee = $user ? $user->employee : null;
@@ -131,7 +218,10 @@ class EmployeePortalApiController extends ApiController
             return $this->error("You have a pending punch-out for {$missingPunchOut->log_date}. Please complete your project timings and punch out for that day first.", 403);
         }
 
-        $today = Carbon::today()->toDateString();
+        $timezone = $request->input('timezone', config('app.timezone'));
+        session(['employee_timezone' => $timezone]);
+        
+        $today = Carbon::now($timezone)->toDateString();
 
         $alreadyPunched = AttendanceLog::where('userid', $user->id)
             ->whereDate('log_date', $today)
@@ -145,12 +235,13 @@ class EmployeePortalApiController extends ApiController
             // 'company_id' => $user->company_id ?? 1,
             'userid' => $user->id,
             'log_date' => $today,
-            'punch_in' => Carbon::now(),
+            'punch_in' => Carbon::now($timezone),
             'status' => 1,
             'log_status' => 'IN',
-            'punch_in_latitude' => $request->input('location.latitude'),
-            'punch_in_longitude' => $request->input('location.longitude'),
-            'punch_in_address' => $request->input('location.address')
+            'punch_in_latitude' => $request->input('punch_in_latitude'),
+            'punch_in_longitude' => $request->input('punch_in_longitude'),
+            'punch_in_address' => $request->input('punch_in_address'),
+            'timezone' => $timezone
         ]);
 
         return $this->success($log, 'Punched in successfully.', 201);
@@ -162,12 +253,13 @@ class EmployeePortalApiController extends ApiController
     public function punchOut(Request $request): JsonResponse
     {
         $request->validate([
-            'location.latitude' => 'nullable|numeric',
-            'location.longitude' => 'nullable|numeric',
-            'location.address' => 'nullable|string',
+            'punch_out_latitude' => 'nullable|numeric',
+            'punch_out_longitude' => 'nullable|numeric',
+            'punch_out_address' => 'nullable|string',
             'project_times' => 'nullable|array',
             'project_times.*.project_id' => 'required|exists:projects,id',
             'project_times.*.time_minutes' => 'required|integer|min:1',
+            'timezone' => 'nullable|string|timezone'
         ]);
 
         $user = auth('api')->user();
@@ -226,15 +318,103 @@ class EmployeePortalApiController extends ApiController
             }
         }
 
+        $timezone = $request->input('timezone', config('app.timezone'));
+        $now = Carbon::now($timezone);
+
+        // Auto-end active break if any
+        $activeBreak = $log->breaks()->whereNull('end_time')->first();
+        if ($activeBreak) {
+            $duration = $activeBreak->start_time->diffInMinutes($now);
+            $activeBreak->update([
+                'end_time' => $now,
+                'duration_minutes' => $duration
+            ]);
+        }
+
+        // Calculate working hours
+        $totalMinutes = Carbon::parse($log->punch_in)->diffInMinutes($now);
+        $totalBreakMinutes = $log->breaks()->sum('duration_minutes');
+        $workingHours = max(0, $totalMinutes - $totalBreakMinutes);
+
         $log->update([
-            'punch_out' => Carbon::now(),
+            'punch_out' => $now,
             'log_status' => 'OUT',
-            'punch_out_latitude' => $request->input('location.latitude'),
-            'punch_out_longitude' => $request->input('location.longitude'),
-            'punch_out_address' => $request->input('location.address')
+            'working_hours' => $workingHours,
+            'punch_out_latitude' => $request->input('punch_out_latitude'),
+            'punch_out_longitude' => $request->input('punch_out_longitude'),
+            'punch_out_address' => $request->input('punch_out_address')
         ]);
 
         return $this->success($log, 'Punched out successfully.');
+    }
+
+    /**
+     * Start Break
+     */
+    public function startBreak(Request $request): JsonResponse
+    {
+        $user = auth('api')->user();
+        if (!$user || !$user->employee) {
+            return $this->error('Employee profile not found', 404);
+        }
+
+        $log = AttendanceLog::where('userid', $user->id)
+            ->whereNull('punch_out')
+            ->orderBy('log_date', 'desc')
+            ->first();
+
+        if (!$log) {
+            return $this->error('You must punch in before starting a break.', 403);
+        }
+
+        $activeBreak = $log->breaks()->whereNull('end_time')->first();
+        if ($activeBreak) {
+            return $this->error('You are already on a break.', 400);
+        }
+
+        $timezone = $request->input('timezone', config('app.timezone'));
+        
+        $break = $log->breaks()->create([
+            'start_time' => Carbon::now($timezone),
+        ]);
+
+        return $this->success($break, 'Break started successfully.', 201);
+    }
+
+    /**
+     * End Break
+     */
+    public function endBreak(Request $request): JsonResponse
+    {
+        $user = auth('api')->user();
+        if (!$user || !$user->employee) {
+            return $this->error('Employee profile not found', 404);
+        }
+
+        $log = AttendanceLog::where('userid', $user->id)
+            ->whereNull('punch_out')
+            ->orderBy('log_date', 'desc')
+            ->first();
+
+        if (!$log) {
+            return $this->error('No active punch in found.', 400);
+        }
+
+        $activeBreak = $log->breaks()->whereNull('end_time')->first();
+        if (!$activeBreak) {
+            return $this->error('You are not currently on a break.', 400);
+        }
+
+        $timezone = $request->input('timezone', config('app.timezone'));
+        $now = Carbon::now($timezone);
+        $duration = $activeBreak->start_time->diffInMinutes($now);
+
+        $activeBreak->update([
+            'end_time' => $now,
+            'duration_minutes' => $duration
+        ]);
+
+        return $this->success($activeBreak, 'Break ended successfully.');
     }
 
     /**
@@ -387,7 +567,7 @@ class EmployeePortalApiController extends ApiController
         if (!$employee)
             return $this->error('Employee profile not found', 404);
 
-        $reports = TaskReport::where('employee_id', $employee->id)->latest()->get();
+        $reports = TaskReport::where('employee_id', $user->id)->latest()->get();
         return $this->success($reports);
     }
 

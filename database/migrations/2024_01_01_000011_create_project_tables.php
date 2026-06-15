@@ -42,10 +42,11 @@ return new class extends Migration
 
         Schema::create('task_reports', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete();
+            $table->integer('employee_id');
             $table->date('date');
             $table->text('tasks_completed');
             $table->text('plan_tomorrow');
+            $table->text('pending_tasks')->nullable();
             $table->text('remarks')->nullable();
             $table->integer('created_by')->nullable();
             $table->integer('deleted_by')->nullable();

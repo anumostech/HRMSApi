@@ -26,6 +26,8 @@ return new class extends Migration
             $table->decimal('punch_out_latitude', 10, 8)->nullable();
             $table->decimal('punch_out_longitude', 11, 8)->nullable();
             $table->text('punch_out_address')->nullable();
+            $table->text('timezone')->nullable();
+            $table->integer('working_hours')->nullable();
             $table->integer('created_by')->nullable();
             $table->integer('deleted_by')->nullable();
             $table->timestamps();

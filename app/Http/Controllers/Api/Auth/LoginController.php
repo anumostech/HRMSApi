@@ -128,6 +128,42 @@ class LoginController extends ApiController
         return $this->success(null, 'Successfully logged out');
     }
 
+    #[OA\Post(
+        path: "/api/auth/refresh",
+        operationId: "refreshToken",
+        summary: "Refresh auth token",
+        description: "Refresh the current access token",
+        security: [["bearerAuth" => []]],
+        tags: ["Authentication"]
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Token refreshed successfully",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "access_token", type: "string"),
+                new OA\Property(property: "token_type", type: "string", example: "bearer"),
+                new OA\Property(property: "user", type: "object")
+            ]
+        )
+    )]
+    #[OA\Response(response: 401, description: "Unauthenticated")]
+    public function refresh(): JsonResponse
+    {
+        try {
+            $token = auth('api')->refresh();
+            $user = auth('api')->user();
+            
+            if (!$user) {
+                return $this->error('User not found', 404);
+            }
+            
+            return $this->respondWithToken($token, $user);
+        } catch (\Exception $e) {
+            return $this->error('Token could not be refreshed. ' . $e->getMessage(), 401);
+        }
+    }
+
     #[OA\Get(
         path: "/api/auth/me",
         operationId: "getAuthenticatedUser",

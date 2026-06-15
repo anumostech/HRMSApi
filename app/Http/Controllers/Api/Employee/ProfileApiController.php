@@ -73,15 +73,20 @@ class ProfileApiController extends ApiController
         $employee = $user->employee;
 
         if ($employee) {
+            if(!$request->personal_email){
+                return $this->error('Personal email is required for employee', 422);
+            }
 
             // Update employee table
             $employee->update([
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
                 'personal_email' => $request->personal_email,
-                'personal_number' => $request->phone_number,
+                'personal_number' => $request->personal_number,
                 'address' => $request->address,
             ]);
+
+
 
             // Avatar upload
             if ($request->hasFile('avatar')) {

@@ -44,17 +44,25 @@ class AttendanceApiController extends ApiController
     #[OA\Response(response: 200, description: 'Successful operation', content: new OA\JsonContent(properties: [new OA\Property(property: 'success', type: 'boolean', example: true), new OA\Property(property: 'data', type: 'object')]))]
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->get('per_page', 100);
+        $perPage = 100;
         $companyId = $request->get('company_id');
         $employeeName = $request->get('employee_name');
         $datePreset = $request->get('date_preset', 'all');
 
-        $query = AttendanceLog::with(['company', 'user.employee', 'user.department'])
+        $query = AttendanceLog::with(['company', 'user.employee', 'user.department', 'breaks'])
             ->select(
+                'id',
                 'company_id',
                 'userid',
                 'attendance_status',
                 'log_date',
+                'working_hours',
+                'punch_in_latitude',
+                'punch_in_longitude',
+                'punch_in_address',
+                'punch_out_latitude',
+                'punch_out_longitude',
+                'punch_out_address',
                 DB::raw("MIN(punch_in) as punch_in"),
                 DB::raw("MAX(punch_out) as punch_out")
             );
@@ -75,9 +83,70 @@ class AttendanceApiController extends ApiController
         }
 
 
-        $attendance = $query->groupBy('company_id', 'userid', 'log_date', 'attendance_status')
+        $attendance = $query->groupBy(
+            'id',
+            'company_id',
+            'userid',
+            'log_date',
+            'attendance_status',
+            'working_hours',
+            'punch_in_latitude',
+            'punch_in_longitude',
+            'punch_in_address',
+            'punch_out_latitude',
+            'punch_out_longitude',
+            'punch_out_address',
+        )
             ->orderBy('log_date', 'desc')
             ->paginate($perPage);
+
+        $attendance->getCollection()->transform(function ($log) {
+            $tz = config('app.timezone', 'Asia/Dubai');
+
+            // Format date to dd/mm/yyyy
+            $log->log_date = $log->log_date
+                ? Carbon::parse($log->log_date)->format('d/m/Y')
+                : '--';
+
+            $log->punch_in = $log->punch_in
+                ? Carbon::parse($log->punch_in)->setTimezone($tz)->format('h:i A')
+                : '--';
+            // Output → "08 Jun 2026, 07:29 AM"
+
+            $log->punch_out = $log->punch_out
+                ? Carbon::parse($log->punch_out)->setTimezone($tz)->format('h:i A')
+                : '--';
+            // Output → "08 Jun 2026, 12:32 PM"
+
+            // Format working_hours → "8 hrs 30 mins"
+            $minutes = $log->working_hours ?? 0;
+            $hours = intdiv($minutes, 60);
+            $mins = $minutes % 60;
+
+            if ($minutes == 0)
+                $log->working_hours = '--';
+            elseif ($hours == 0)
+                $log->working_hours = "{$mins} mins";
+            elseif ($mins == 0)
+                $log->working_hours = "{$hours} hrs";
+            else
+                $log->working_hours = "{$hours} hrs {$mins} mins";
+
+            $totalBreakMinutes = 0;
+            $formattedBreaks = [];
+            foreach ($log->breaks as $b) {
+                $totalBreakMinutes += $b->duration_minutes;
+                $formattedBreaks[] = [
+                    'start_time' => $b->start_time ? Carbon::parse($b->start_time)->setTimezone($tz)->format('h:i A') : null,
+                    'end_time' => $b->end_time ? Carbon::parse($b->end_time)->setTimezone($tz)->format('h:i A') : null,
+                    'duration_minutes' => $b->duration_minutes,
+                ];
+            }
+            $log->total_break_minutes = $totalBreakMinutes;
+            $log->formatted_breaks = $formattedBreaks;
+
+            return $log;
+        });
 
         return $this->success([
             'attendance' => $attendance,
@@ -144,7 +213,6 @@ class AttendanceApiController extends ApiController
             ]);
 
             return $this->success($attendance, 'Attendance  added successfully.');
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->error($e->getMessage(), 422, $e->errors());
         } catch (\Exception $e) {
@@ -539,7 +607,7 @@ class AttendanceApiController extends ApiController
     private function getStats(): array
     {
         $today = Carbon::today()->toDateString();
-        $activeEmployeesCount = User::where('status', 'active')->count();
+        $activeEmployeesCount = User::where('status', 'active')->where('type', 'employee')->count();
 
         $todayLogs = AttendanceLog::whereDate('log_date', $today)
             ->select('userid', DB::raw('MIN(punch_in) as punch_in'), DB::raw('MAX(punch_out) as punch_out'))
